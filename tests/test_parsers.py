@@ -153,8 +153,12 @@ class ParserTests(unittest.TestCase):
 
     def test_impact_finds_configuration_owners_in_both_directions(self):
         impact = GraphIndex(graph()).impact("entity:binary_sensor.motion")
-        self.assertEqual([item["id"] for item in impact["automations"]], ["automation:office"])
-        self.assertEqual([item["id"] for item in impact["scripts"]], ["script:good_night"])
+        self.assertEqual(
+            [item["id"] for item in impact["automations"]], ["automation:office"]
+        )
+        self.assertEqual(
+            [item["id"] for item in impact["scripts"]], ["script:good_night"]
+        )
         self.assertGreaterEqual(impact["levels"], 4)
 
     def test_edge_ids_are_stable_and_equivalent_edges_are_deduplicated(self):

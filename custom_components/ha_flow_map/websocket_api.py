@@ -117,7 +117,9 @@ def async_register_websocket_commands(hass):
         {
             vol.Required("type"): "ha_flow_map/impact",
             vol.Required("node_id"): str,
-            vol.Optional("max_depth", default=12): vol.All(int, vol.Range(min=1, max=20)),
+            vol.Optional("max_depth", default=12): vol.All(
+                int, vol.Range(min=1, max=20)
+            ),
         }
     )
     @websocket_api.async_response

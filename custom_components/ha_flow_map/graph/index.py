@@ -4,8 +4,15 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 
-
-SEARCHABLE_TYPES = {"automation", "script", "scene", "entity", "event", "device", "area"}
+SEARCHABLE_TYPES = {
+    "automation",
+    "script",
+    "scene",
+    "entity",
+    "event",
+    "device",
+    "area",
+}
 
 
 class GraphIndex:
@@ -105,7 +112,9 @@ class GraphIndex:
             level = seen[current]
             node = self.graph.nodes.get(current)
             if node and node.type in impacted and current != node_id:
-                impacted[node.type].append({"id": node.id, "label": node.label, "depth": level})
+                impacted[node.type].append(
+                    {"id": node.id, "label": node.label, "depth": level}
+                )
             if level >= max_depth:
                 continue
             for edge in self.inbound[current] + self.outbound[current]:
