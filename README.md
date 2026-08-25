@@ -40,3 +40,7 @@ discovered a relation.
 The parser tests in `tests/test_parsers.py` cover recursive control-flow blocks,
 dynamic templates, calls, scene targets, reverse indexes and bounded traversal.
 They are intentionally independent of a running HA instance.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
