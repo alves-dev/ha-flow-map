@@ -22,6 +22,11 @@ The panel searches the index, expands inbound/outbound neighborhoods (depth
 1–3), distinguishes confirmed and dynamic references, and can hide/show service
 nodes without changing the stored graph. Rebuild is administrator-only.
 
+Selecting a node also shows an impact summary: the automations, scripts and
+scenes connected to it, plus the maximum number of dependency levels. This
+walks references in both directions so it catches both callers and targets;
+results are bounded to keep the panel responsive.
+
 ## Deliberate MVP limits
 
 The integration does not render or execute Jinja templates. Literal entity IDs

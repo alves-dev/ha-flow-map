@@ -113,6 +113,27 @@ def async_register_websocket_commands(hass):
     async def flow(_hass, connection, msg):
         await _graph_data(_hass, connection, msg)
 
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "ha_flow_map/impact",
+            vol.Required("node_id"): str,
+            vol.Optional("max_depth", default=12): vol.All(int, vol.Range(min=1, max=20)),
+        }
+    )
+    @websocket_api.async_response
+    async def impact(_hass, connection, msg):
+        coordinator = _coordinator(_hass)
+        if (
+            not coordinator
+            or not coordinator.index
+            or msg["node_id"] not in coordinator.graph.nodes
+        ):
+            connection.send_error(msg["id"], "not_found", "Flow Map node not found")
+            return
+        connection.send_result(
+            msg["id"], coordinator.index.impact(msg["node_id"], msg["max_depth"])
+        )
+
     @websocket_api.websocket_command({vol.Required("type"): "ha_flow_map/rebuild"})
     @websocket_api.require_admin
     @websocket_api.async_response
@@ -126,5 +147,5 @@ def async_register_websocket_commands(hass):
         await coordinator.async_rebuild()
         connection.send_result(msg["id"], coordinator.status_data())
 
-    for command in (search, status, node, relations, flow, rebuild):
+    for command in (search, status, node, relations, flow, impact, rebuild):
         websocket_api.async_register_command(hass, command)
