@@ -7,3 +7,6 @@ input_boolean:
     name: Flow Map demo enabled
     initial: true
     icon: mdi:check-circle
+  flow_map_demo_door:
+    name: Flow Map demo door
+    icon: mdi:door-open

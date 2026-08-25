@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { displayGraph, gridLayout } from "../custom_components/ha_flow_map/frontend/flow-map-model.js";
+import { displayGraph, flowLayout, gridLayout } from "../custom_components/ha_flow_map/frontend/flow-map-model.js";
 
 const graph = {
   nodes: [{ id: "automation:office", type: "automation" }, { id: "service:light.turn_on", type: "service" }, { id: "entity:light.desk", type: "entity" }],
@@ -15,4 +15,6 @@ assert.deepEqual(compact.edges.map(({ source, target }) => [source, target]), [[
 const layout = gridLayout(compact.nodes);
 assert.equal(layout.get("automation:office").x, 120);
 assert.equal(layout.get("entity:light.desk").x, 370);
+const flow = flowLayout(compact.nodes, compact.edges);
+assert.ok(flow.get("entity:light.desk").y > flow.get("automation:office").y);
 console.log("frontend model tests: ok");
