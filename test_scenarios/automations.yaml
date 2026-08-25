@@ -1,0 +1,35 @@
+- id: flow_map_demo_motion_lights
+  alias: Flow Map Demo — Motion starts lighting flow
+  description: Tests trigger, nested condition, choose, script and service relations.
+  triggers:
+    - trigger: state
+      entity_id: input_boolean.flow_map_demo_motion
+      to: "on"
+  conditions:
+    - condition: state
+      entity_id: input_boolean.flow_map_demo_enabled
+      state: "on"
+  actions:
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: sun.sun
+              state: below_horizon
+          sequence:
+            - action: script.flow_map_demo_evening
+      default:
+        - action: input_boolean.turn_off
+          target:
+            entity_id: input_boolean.flow_map_demo_motion
+
+- id: flow_map_demo_disable
+  alias: Flow Map Demo — Disable stops lighting flow
+  description: Tests inbound relations and a direct service target.
+  triggers:
+    - trigger: state
+      entity_id: input_boolean.flow_map_demo_enabled
+      to: "off"
+  actions:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.flow_map_demo_motion

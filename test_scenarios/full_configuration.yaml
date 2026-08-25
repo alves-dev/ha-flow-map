@@ -1,0 +1,24 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+input_boolean:
+  flow_map_demo_motion:
+    name: Flow Map demo motion
+    icon: mdi:motion-sensor
+  flow_map_demo_enabled:
+    name: Flow Map demo enabled
+    initial: true
+    icon: mdi:check-circle
+
+logger:
+  default: info
+  logs:
+    homeassistant.components.cloud: debug

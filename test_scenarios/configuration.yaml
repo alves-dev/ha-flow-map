@@ -1,0 +1,9 @@
+# Test-only Home Assistant configuration additions for Flow Map validation.
+input_boolean:
+  flow_map_demo_motion:
+    name: Flow Map demo motion
+    icon: mdi:motion-sensor
+  flow_map_demo_enabled:
+    name: Flow Map demo enabled
+    initial: true
+    icon: mdi:check-circle

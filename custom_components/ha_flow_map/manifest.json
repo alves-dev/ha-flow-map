@@ -1,0 +1,12 @@
+{
+  "domain": "ha_flow_map",
+  "name": "HA Flow Map",
+  "codeowners": ["@alves-dev"],
+  "config_flow": true,
+  "dependencies": ["frontend", "http"],
+  "documentation": "https://github.com/alves-dev/ha-flow-map",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/alves-dev/ha-flow-map/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

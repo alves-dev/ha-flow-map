@@ -1,0 +1,27 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tooling and editor state
+.idea/
+
+# Local environment files
+.env
+.env.*
+
+# Private planning document: never version or publish it.
+HA-FLOW-MAP-SPEC.md
