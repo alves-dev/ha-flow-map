@@ -119,6 +119,21 @@ class ParserTests(unittest.TestCase):
             any(edge.confidence == "dynamic" for edge in result.edges.values())
         )
 
+    def test_if_actions_follow_the_condition_node(self):
+        result = graph()
+        condition = next(
+            node
+            for node in result.nodes.values()
+            if node.metadata.get("location") == "actions[0].if[0]"
+        )
+        paths = {
+            edge.location
+            for edge in result.edges.values()
+            if edge.source == condition.id
+        }
+        self.assertIn("actions[0].then[0].parallel", paths)
+        self.assertIn("actions[0].else[0]", paths)
+
     def test_reverse_index_and_bounded_expansion(self):
         index = GraphIndex(graph())
         node_id = "entity:binary_sensor.motion"

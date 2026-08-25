@@ -104,6 +104,7 @@ class FlowParser:
                 )
 
     def condition(self, owner, config, location):
+        created = []
         items = config if isinstance(config, list) else [config]
         for index, item in enumerate(items):
             if not isinstance(item, dict):
@@ -114,6 +115,7 @@ class FlowParser:
                 item.get("condition", "condition"),
                 f"{location}[{index}]",
             )
+            created.append(node)
             values, dynamic = self._entity_values(
                 item.get("entity_id", item.get("entity_ids"))
             )
@@ -134,7 +136,9 @@ class FlowParser:
             for key in ("conditions", "condition"):
                 nested = item.get(key)
                 if isinstance(nested, (dict, list)) and nested is not item:
-                    self.condition(node, nested, f"{location}[{index}].{key}")
+                    created.extend(
+                        self.condition(node, nested, f"{location}[{index}].{key}")
+                    )
             for value in item.values():
                 refs, dynamic = self._entity_values(value)
                 for entity in refs:
@@ -145,6 +149,7 @@ class FlowParser:
                         location,
                         "dynamic" if dynamic else "confirmed",
                     )
+        return created
 
     def triggers(self, owner, config, location, relation="triggers"):
         for index, item in enumerate(config if isinstance(config, list) else [config]):
@@ -197,9 +202,10 @@ class FlowParser:
                 continue
             if "if" in action:
                 branch = self._struct(owner, "branch", "If", loc)
-                self.condition(branch, action["if"], loc + ".if")
-                self.actions(branch, action.get("then", []), loc + ".then")
-                self.actions(branch, action.get("else", []), loc + ".else")
+                conditions = self.condition(branch, action["if"], loc + ".if")
+                condition_owner = conditions[-1] if conditions else branch
+                self.actions(condition_owner, action.get("then", []), loc + ".then")
+                self.actions(condition_owner, action.get("else", []), loc + ".else")
             if "choose" in action:
                 branch = self._struct(owner, "branch", "Choose", loc)
                 for choice_index, choice in enumerate(
@@ -211,13 +217,13 @@ class FlowParser:
                         f"Option {choice_index + 1}",
                         f"{loc}.choose[{choice_index}]",
                     )
-                    self.condition(
+                    conditions = self.condition(
                         option,
                         choice.get("conditions", []),
                         f"{loc}.choose[{choice_index}].conditions",
                     )
                     self.actions(
-                        option,
+                        conditions[-1] if conditions else option,
                         choice.get("sequence", []),
                         f"{loc}.choose[{choice_index}].sequence",
                     )
@@ -231,13 +237,15 @@ class FlowParser:
             if "repeat" in action:
                 branch = self._struct(owner, "branch", "Repeat", loc)
                 repeat = action["repeat"] if isinstance(action["repeat"], dict) else {}
-                self.condition(
+                conditions = self.condition(
                     branch,
                     repeat.get("while", repeat.get("until", [])),
                     loc + ".repeat",
                 )
                 self.actions(
-                    branch, repeat.get("sequence", []), loc + ".repeat.sequence"
+                    conditions[-1] if conditions else branch,
+                    repeat.get("sequence", []),
+                    loc + ".repeat.sequence",
                 )
             service = action.get("action", action.get("service"))
             if not isinstance(service, str):
@@ -312,11 +320,11 @@ class FlowParser:
         self.triggers(
             node_id, config.get("triggers", config.get("trigger", [])), "triggers"
         )
-        self.condition(
+        conditions = self.condition(
             node_id, config.get("conditions", config.get("condition", [])), "conditions"
         )
         self.actions(
-            node_id,
+            conditions[-1] if conditions else node_id,
             config.get("actions", config.get("action", config.get("sequence", []))),
             "actions",
         )
