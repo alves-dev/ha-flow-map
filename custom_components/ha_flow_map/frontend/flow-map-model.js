@@ -26,17 +26,33 @@ export function gridLayout(nodes, columns = 4) {
 }
 
 /** Arrange graph layers in the direction of the relation: source → target. */
-export function flowLayout(nodes, edges) {
-  const rank = new Map(nodes.map((node) => [node.id, 0]));
-  for (let pass = 0; pass < nodes.length; pass += 1) {
-    let changed = false;
-    for (const edge of edges) {
-      if (!rank.has(edge.source) || !rank.has(edge.target)) continue;
-      const next = Math.min(nodes.length - 1, rank.get(edge.source) + 1);
-      if (next > rank.get(edge.target)) { rank.set(edge.target, next); changed = true; }
-    }
-    if (!changed) break;
+export function flowLayout(nodes, edges, rootId) {
+  const rank = new Map();
+  const referenceEdges = new Set(["reads_state", "used_in_condition"]);
+  const children = new Map(nodes.map((node) => [node.id, []]));
+  for (const edge of edges) {
+    if (referenceEdges.has(edge.type) || !children.has(edge.source) || !children.has(edge.target)) continue;
+    children.get(edge.source).push(edge.target);
   }
+  const root = nodes.some((node) => node.id === rootId) ? rootId : nodes[0]?.id;
+  const queue = [];
+  const add = (id, level) => { if (!rank.has(id)) { rank.set(id, level); queue.push(id); } };
+  if (root) {
+    add(root, 1);
+    for (const edge of edges) if (edge.target === root && ["triggers", "listens_event"].includes(edge.type)) add(edge.source, 0);
+  }
+  const walk = () => {
+    while (queue.length) {
+      const source = queue.shift();
+      for (const target of children.get(source)) {
+        const edge = edges.find((item) => item.source === source && item.target === target && !referenceEdges.has(item.type));
+        if (edge?.type === "triggers" && rank.get(source) !== 0) continue;
+        add(target, rank.get(source) + 1);
+      }
+    }
+  };
+  walk();
+  for (const node of nodes) { add(node.id, 0); walk(); }
   const layers = new Map();
   for (const node of nodes) {
     const level = rank.get(node.id);
