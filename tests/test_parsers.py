@@ -2,6 +2,7 @@ import unittest
 
 from custom_components.ha_flow_map.graph.builder import build_graph
 from custom_components.ha_flow_map.graph.index import GraphIndex
+from custom_components.ha_flow_map.graph.model import Node
 from custom_components.ha_flow_map.parsers.automation import _safe_data
 
 
@@ -127,6 +128,13 @@ class ParserTests(unittest.TestCase):
             any(edge["target"] == "automation:office" for edge in data["edges"])
         )
         self.assertEqual(index.search("office")[0]["type"], "automation")
+
+    def test_search_hides_entity_duplicate_of_configuration_node(self):
+        result = graph()
+        result.add_node(Node("entity:automation.office", "entity", "Office automation"))
+        index = GraphIndex(result)
+        matches = index.search("office")
+        self.assertEqual([item["id"] for item in matches], ["automation:office"])
 
     def test_impact_finds_configuration_owners_in_both_directions(self):
         impact = GraphIndex(graph()).impact("entity:binary_sensor.motion")

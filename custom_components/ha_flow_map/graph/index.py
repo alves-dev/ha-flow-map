@@ -5,6 +5,9 @@ from __future__ import annotations
 from collections import defaultdict, deque
 
 
+SEARCHABLE_TYPES = {"automation", "script", "scene", "entity", "event", "device", "area"}
+
+
 class GraphIndex:
     def __init__(self, graph):
         self.graph = graph
@@ -16,12 +19,34 @@ class GraphIndex:
 
     def search(self, query, limit=50):
         needle = query.lower().strip()
-        nodes = self.graph.nodes.values()
+        nodes = (
+            node
+            for node in self.graph.nodes.values()
+            if node.type in SEARCHABLE_TYPES
+            and not self._is_duplicate_configuration_entity(node)
+        )
         return [
             node.as_dict()
             for node in nodes
             if not needle or needle in node.id.lower() or needle in node.label.lower()
         ][:limit]
+
+    def _is_duplicate_configuration_entity(self, node):
+        """Hide runtime entities when their navigable config node is present.
+
+        Home Assistant exposes automations, scripts and scenes as entities too.
+        Showing both in search yields two identical friendly names, while the
+        configuration node is the useful entry point for a flow exploration.
+        """
+        if node.type != "entity":
+            return False
+        entity_id = node.id.removeprefix("entity:")
+        domain, separator, object_id = entity_id.partition(".")
+        return bool(
+            separator
+            and domain in {"automation", "script", "scene"}
+            and f"{domain}:{object_id}" in self.graph.nodes
+        )
 
     def neighborhood(
         self, node_id, direction="both", depth=1, max_nodes=250, max_edges=500
