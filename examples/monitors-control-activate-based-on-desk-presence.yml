@@ -1,0 +1,92 @@
+alias: 'Monitors Control: Activate Based on Desk Presence'
+description: >-
+  This automation activates and deactivates monitors based on occupancy detected
+  at the desk or the status of a switch. If someone is present or the switch is
+  turned on, the monitors will be powered on. If they leave or the switch is
+  turned off, the monitors will shut down. Additionally, if it's night, the
+  automation can turn on specific monitors to ensure visibility.
+triggers:
+  - trigger: switch.turned_on
+    target:
+      entity_id: switch.interruptor_escritorio_switch_3
+    options:
+      behavior: each
+      for: '00:00:00'
+    id: 'on'
+    note: Terceiro botão
+  - trigger: switch.turned_off
+    target:
+      entity_id: switch.interruptor_escritorio_switch_3
+    options:
+      behavior: each
+      for: '00:00:00'
+    id: 'off'
+    note: Terceiro botão
+  - trigger: motion.detected
+    target:
+      device_id: d178b71c6c1b2a5dde145cf2882330a0
+    options:
+      for: '00:00:00'
+      behavior: first
+    id: 'on'
+  - trigger: motion.cleared
+    target:
+      device_id: d178b71c6c1b2a5dde145cf2882330a0
+    options:
+      for: '00:00:00'
+      behavior: first
+    id: 'off'
+conditions: []
+actions:
+  - if:
+      - condition: trigger
+        id:
+          - 'on'
+    then:
+      - action: switch.turn_on
+        metadata: {}
+        target:
+          device_id:
+            - 846a13ce871fa1419005231ff86131c7
+            - 0f0fcde9bae72638ddeefb3c7751bde4
+          entity_id: switch.interruptor_escritorio_switch_3
+        data: {}
+    else:
+      - action: switch.turn_off
+        metadata: {}
+        target:
+          device_id:
+            - 846a13ce871fa1419005231ff86131c7
+            - 0f0fcde9bae72638ddeefb3c7751bde4
+          entity_id: switch.interruptor_escritorio_switch_3
+        data: {}
+  - condition: time
+    after: '18:00:00'
+    before: '07:00:00'
+  - if:
+      - condition: trigger
+        id:
+          - 'on'
+    then:
+      - action: switch.turn_on
+        metadata: {}
+        target:
+          entity_id: switch.interruptor_escritorio_switch_1
+        data: {}
+      - action: light.turn_on
+        metadata: {}
+        target:
+          entity_id: light.escritorio_kiosk_satellite_desk_screen
+        data: {}
+    else:
+      - action: switch.turn_off
+        metadata: {}
+        target:
+          entity_id: switch.interruptor_escritorio_switch_1
+        data: {}
+      - action: light.turn_off
+        metadata: {}
+        target:
+          entity_id: light.escritorio_kiosk_satellite_desk_screen
+        data: {}
+mode: single
