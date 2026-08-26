@@ -83,8 +83,8 @@ class FlowParser:
         for entity_id in refs:
             target_id = entity_node(self.graph, entity_id)
             self.edge(
-                owner,
-                target_id,
+                target_id if relation == "triggers" else owner,
+                owner if relation == "triggers" else target_id,
                 relation,
                 location,
                 "dynamic" if dynamic else "confirmed",
@@ -97,9 +97,12 @@ class FlowParser:
                 node_id = f"{kind}:{value}"
                 self.graph.add_node(Node(node_id, kind, str(value)))
                 self.edge(
-                    owner,
-                    node_id,
-                    relation if relation == "targets" else "targets",
+                    node_id if relation == "triggers" else owner,
+                    owner if relation == "triggers" else node_id,
+                    # A device/area can be the source of a trigger just as an
+                    # entity can.  Preserve that relationship so the graph and
+                    # UI do not mistake it for an action target.
+                    relation if relation in {"targets", "triggers"} else "targets",
                     location,
                 )
 
@@ -166,9 +169,12 @@ class FlowParser:
                     "dynamic" if dynamic else "confirmed",
                 )
             # Device and area triggers have no entity reference but remain discoverable.
+            # Device-trigger automations place their selector under ``target``;
+            # older forms keep it at the trigger's top level.
+            target = item.get("target")
             self.target(
                 owner,
-                {key: item[key] for key in ("device_id", "area_id") if key in item},
+                target if isinstance(target, dict) else item,
                 "triggers",
                 f"{location}[{index}]",
             )
