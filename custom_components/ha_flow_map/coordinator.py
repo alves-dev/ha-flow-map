@@ -11,6 +11,7 @@ from homeassistant.helpers.event import async_call_later
 
 from .graph.builder import build_graph
 from .graph.index import GraphIndex
+from .graph.model import Graph
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -137,7 +138,7 @@ class FlowMapCoordinator:
                 self.status = "failed"
                 self.warnings.append({"source": "index", "message": str(err)})
                 if self.graph is None:
-                    self.graph = build_graph({}, {}, {})
+                    self.graph = Graph()
                     self.index = GraphIndex(self.graph)
             self.duration_ms = round((self.hass.loop.time() - started) * 1000)
             self.last_indexed = datetime.now(UTC).isoformat()

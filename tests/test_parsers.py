@@ -2,6 +2,7 @@ import unittest
 
 from custom_components.ha_flow_map.graph.builder import build_graph
 from custom_components.ha_flow_map.graph.index import GraphIndex
+from custom_components.ha_flow_map.graph.model import Node
 from custom_components.ha_flow_map.parsers.automation import _safe_data
 
 
@@ -118,6 +119,21 @@ class ParserTests(unittest.TestCase):
             any(edge.confidence == "dynamic" for edge in result.edges.values())
         )
 
+    def test_if_actions_follow_the_condition_node(self):
+        result = graph()
+        condition = next(
+            node
+            for node in result.nodes.values()
+            if node.metadata.get("location") == "actions[0].if[0]"
+        )
+        paths = {
+            edge.location
+            for edge in result.edges.values()
+            if edge.source == condition.id
+        }
+        self.assertIn("actions[0].then[0].parallel", paths)
+        self.assertIn("actions[0].else[0]", paths)
+
     def test_reverse_index_and_bounded_expansion(self):
         index = GraphIndex(graph())
         node_id = "entity:binary_sensor.motion"
@@ -128,10 +144,21 @@ class ParserTests(unittest.TestCase):
         )
         self.assertEqual(index.search("office")[0]["type"], "automation")
 
+    def test_search_hides_entity_duplicate_of_configuration_node(self):
+        result = graph()
+        result.add_node(Node("entity:automation.office", "entity", "Office automation"))
+        index = GraphIndex(result)
+        matches = index.search("office")
+        self.assertEqual([item["id"] for item in matches], ["automation:office"])
+
     def test_impact_finds_configuration_owners_in_both_directions(self):
         impact = GraphIndex(graph()).impact("entity:binary_sensor.motion")
-        self.assertEqual([item["id"] for item in impact["automations"]], ["automation:office"])
-        self.assertEqual([item["id"] for item in impact["scripts"]], ["script:good_night"])
+        self.assertEqual(
+            [item["id"] for item in impact["automations"]], ["automation:office"]
+        )
+        self.assertEqual(
+            [item["id"] for item in impact["scripts"]], ["script:good_night"]
+        )
         self.assertGreaterEqual(impact["levels"], 4)
 
     def test_edge_ids_are_stable_and_equivalent_edges_are_deduplicated(self):

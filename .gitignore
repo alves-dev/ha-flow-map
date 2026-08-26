@@ -10,6 +10,7 @@ __pycache__/
 .coverage.*
 coverage.xml
 htmlcov/
+*.log
 
 # Virtual environments
 .venv/
@@ -25,3 +26,5 @@ env/
 
 # Private planning document: never version or publish it.
 HA-FLOW-MAP-SPEC.md
+
+TODO.md
