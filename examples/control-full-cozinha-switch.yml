@@ -1,0 +1,46 @@
+alias: Control Full Cozinha switch
+description: ''
+triggers:
+  - trigger: state
+    entity_id:
+      - switch.interruptor_cozinha_switch_3
+    from:
+      - 'on'
+    id: turn-off
+    to:
+      - 'off'
+  - trigger: state
+    entity_id:
+      - switch.interruptor_cozinha_switch_3
+    from:
+      - 'off'
+    id: turn-on
+    to:
+      - 'on'
+conditions: []
+actions:
+  - if:
+      - condition: trigger
+        id:
+          - turn-off
+    then:
+      - action: switch.turn_off
+        metadata: {}
+        target:
+          entity_id:
+            - switch.interruptor_cozinha_switch_1
+            - switch.interruptor_cozinha_switch_2
+        data: {}
+  - if:
+      - condition: trigger
+        id:
+          - turn-on
+    then:
+      - action: switch.turn_on
+        metadata: {}
+        target:
+          entity_id:
+            - switch.interruptor_cozinha_switch_1
+            - switch.interruptor_cozinha_switch_2
+        data: {}
+mode: single

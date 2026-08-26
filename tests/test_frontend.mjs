@@ -34,4 +34,10 @@ const feedback = flowLayout(
   ],
 );
 assert.ok(Math.max(...[...feedback.values()].map(({ y }) => y)) < 500);
+const deviceTrigger = flowLayout(
+  [{ id: "automation:office" }, { id: "device:motion" }],
+  [{ source: "device:motion", target: "automation:office", type: "triggers" }],
+  "automation:office",
+);
+assert.ok(deviceTrigger.get("device:motion").y < deviceTrigger.get("automation:office").y);
 console.log("frontend model tests: ok");

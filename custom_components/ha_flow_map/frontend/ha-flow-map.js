@@ -13,7 +13,7 @@ const serviceTitle = (label) => {
   return object ? `${verb} ${object}` : verb;
 };
 const entityDomain = (node) => node.metadata?.domain || node.id.replace(/^entity:/, "").split(".")[0];
-const nodeRole = (node, edges) => node.type === "entity" && edges.some((edge) => edge.source === node.id && ["triggers", "listens_event"].includes(edge.type)) ? "trigger" : node.type;
+const nodeRole = (node, edges) => ["entity", "device", "area"].includes(node.type) && edges.some((edge) => edge.source === node.id && ["triggers", "listens_event"].includes(edge.type)) ? "trigger" : node.type;
 const nodeTitle = (node, edges, byId) => {
   if (node.type === "service") return serviceTitle(node.label);
   if (node.type === "condition") {

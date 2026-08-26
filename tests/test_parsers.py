@@ -134,6 +134,38 @@ class ParserTests(unittest.TestCase):
         self.assertIn("actions[0].then[0].parallel", paths)
         self.assertIn("actions[0].else[0]", paths)
 
+    def test_device_and_area_triggers_are_preserved_as_triggers(self):
+        result = build_graph(
+            {
+                "automation.device_trigger": {
+                    "triggers": [
+                        {
+                            "trigger": "motion.detected",
+                            "target": {"device_id": "motion-device"},
+                        },
+                        {
+                            "trigger": "event",
+                            "target": {"area_id": "office"},
+                        },
+                    ]
+                }
+            },
+            {},
+            {},
+        )
+
+        trigger_edges = {
+            (edge.source, edge.target, edge.type) for edge in result.edges.values()
+        }
+        self.assertIn(
+            ("device:motion-device", "automation:device_trigger", "triggers"),
+            trigger_edges,
+        )
+        self.assertIn(
+            ("area:office", "automation:device_trigger", "triggers"),
+            trigger_edges,
+        )
+
     def test_reverse_index_and_bounded_expansion(self):
         index = GraphIndex(graph())
         node_id = "entity:binary_sensor.motion"

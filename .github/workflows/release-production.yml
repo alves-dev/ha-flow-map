@@ -36,7 +36,7 @@ jobs:
           tag="v${version}"
           git rev-parse "${tag}" >/dev/null 2>&1 && { echo "Local tag already exists: ${tag}" >&2; exit 1; }
           git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1 && { echo "Remote tag already exists: ${tag}" >&2; exit 1; }
-          awk -v heading="## [${version}] - " '$0 ~ "^" heading { found = 1; next } found && /^## \[/ { exit } found { print }' CHANGELOG.md > release-notes.md
+          awk -v heading="## [${version}] - " 'index($0, heading) == 1 { found = 1; next } found && /^## \[/ { exit } found { print }' CHANGELOG.md > release-notes.md
           test -s release-notes.md || { echo "CHANGELOG.md has no release notes for ${version}." >&2; exit 1; }
           { echo "tag=${tag}"; echo "title=${tag}"; } >> "$GITHUB_OUTPUT"
 

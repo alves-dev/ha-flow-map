@@ -1,0 +1,214 @@
+{
+  "nodes": [
+    {
+      "id": "automation:monitors_control_activate_based_on_desk_presence:condition:3",
+      "type": "condition",
+      "label": "time",
+      "metadata": {
+        "location": "actions[1][0]"
+      }
+    },
+    {
+      "id": "automation:monitors_control_activate_based_on_desk_presence:branch:1",
+      "type": "branch",
+      "label": "If",
+      "metadata": {
+        "location": "actions[0]"
+      }
+    },
+    {
+      "id": "automation:monitors_control_activate_based_on_desk_presence:branch:4",
+      "type": "branch",
+      "label": "If",
+      "metadata": {
+        "location": "actions[2]"
+      }
+    },
+    {
+      "id": "automation:monitors_control_activate_based_on_desk_presence:branch:4:condition:5",
+      "type": "condition",
+      "label": "trigger",
+      "metadata": {
+        "location": "actions[2].if[0]"
+      }
+    },
+    {
+      "id": "automation:monitors_control_activate_based_on_desk_presence",
+      "type": "automation",
+      "label": "Monitors Control: Activate Based on Desk Presence",
+      "metadata": {
+        "entity_id": "automation.monitors_control_activate_based_on_desk_presence"
+      }
+    },
+    {
+      "id": "service:light.turn_on",
+      "type": "service",
+      "label": "light.turn_on",
+      "metadata": {
+        "domain": "light"
+      }
+    },
+    {
+      "id": "service:light.turn_off",
+      "type": "service",
+      "label": "light.turn_off",
+      "metadata": {
+        "domain": "light"
+      }
+    },
+    {
+      "id": "automation:monitors_control_activate_based_on_desk_presence:branch:1:condition:2",
+      "type": "condition",
+      "label": "trigger",
+      "metadata": {
+        "location": "actions[0].if[0]"
+      }
+    },
+    {
+      "id": "service:switch.turn_on",
+      "type": "service",
+      "label": "switch.turn_on",
+      "metadata": {
+        "domain": "switch"
+      }
+    },
+    {
+      "id": "service:switch.turn_off",
+      "type": "service",
+      "label": "switch.turn_off",
+      "metadata": {
+        "domain": "switch"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:783ba3e296080f67",
+      "source": "automation:monitors_control_activate_based_on_desk_presence",
+      "target": "automation:monitors_control_activate_based_on_desk_presence:branch:1",
+      "type": "contains",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {},
+      "location": "actions[0]"
+    },
+    {
+      "id": "edge:3e8b50fc75b2f141",
+      "source": "automation:monitors_control_activate_based_on_desk_presence",
+      "target": "automation:monitors_control_activate_based_on_desk_presence:condition:3",
+      "type": "contains",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {},
+      "location": "actions[1][0]"
+    },
+    {
+      "id": "edge:b2a95666aca1a188",
+      "source": "automation:monitors_control_activate_based_on_desk_presence",
+      "target": "automation:monitors_control_activate_based_on_desk_presence:branch:4",
+      "type": "contains",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {},
+      "location": "actions[2]"
+    },
+    {
+      "id": "edge:ff20c88c202bb6ef",
+      "source": "automation:monitors_control_activate_based_on_desk_presence:branch:1",
+      "target": "automation:monitors_control_activate_based_on_desk_presence:branch:1:condition:2",
+      "type": "contains",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {},
+      "location": "actions[0].if[0]"
+    },
+    {
+      "id": "edge:7b3c9f515f9b1c72",
+      "source": "automation:monitors_control_activate_based_on_desk_presence:branch:4",
+      "target": "automation:monitors_control_activate_based_on_desk_presence:branch:4:condition:5",
+      "type": "contains",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {},
+      "location": "actions[2].if[0]"
+    },
+    {
+      "id": "edge:51c3a231d59b1ff7",
+      "source": "automation:monitors_control_activate_based_on_desk_presence:branch:1:condition:2",
+      "target": "service:switch.turn_on",
+      "type": "calls_service",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {
+        "service": "switch.turn_on",
+        "data": {}
+      },
+      "location": "actions[0].then[0]"
+    },
+    {
+      "id": "edge:bbd1c1411a031a2b",
+      "source": "automation:monitors_control_activate_based_on_desk_presence:branch:1:condition:2",
+      "target": "service:switch.turn_off",
+      "type": "calls_service",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {
+        "service": "switch.turn_off",
+        "data": {}
+      },
+      "location": "actions[0].else[0]"
+    },
+    {
+      "id": "edge:e88472f8ba72da6a",
+      "source": "automation:monitors_control_activate_based_on_desk_presence:branch:4:condition:5",
+      "target": "service:switch.turn_on",
+      "type": "calls_service",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {
+        "service": "switch.turn_on",
+        "data": {}
+      },
+      "location": "actions[2].then[0]"
+    },
+    {
+      "id": "edge:68a4c90df0c8ac12",
+      "source": "automation:monitors_control_activate_based_on_desk_presence:branch:4:condition:5",
+      "target": "service:light.turn_on",
+      "type": "calls_service",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {
+        "service": "light.turn_on",
+        "data": {}
+      },
+      "location": "actions[2].then[1]"
+    },
+    {
+      "id": "edge:b5189fed34d14c6b",
+      "source": "automation:monitors_control_activate_based_on_desk_presence:branch:4:condition:5",
+      "target": "service:switch.turn_off",
+      "type": "calls_service",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {
+        "service": "switch.turn_off",
+        "data": {}
+      },
+      "location": "actions[2].else[0]"
+    },
+    {
+      "id": "edge:b7e73444a69c4f4a",
+      "source": "automation:monitors_control_activate_based_on_desk_presence:branch:4:condition:5",
+      "target": "service:light.turn_off",
+      "type": "calls_service",
+      "confidence": "confirmed",
+      "source_kind": "automation_config",
+      "metadata": {
+        "service": "light.turn_off",
+        "data": {}
+      },
+      "location": "actions[2].else[1]"
+    }
+  ]
+}
