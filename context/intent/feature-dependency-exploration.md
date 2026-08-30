@@ -14,6 +14,7 @@ Lets users quickly answer practical questions such as what activates an automati
 - [ ] Users can explore inbound, outbound, or combined relationships.
 - [ ] Users can control the amount of surrounding context shown.
 - [ ] The view communicates when the result is limited or contains dynamic references.
+- [x] The panel and its graph exports follow the active Home Assistant theme.
 
 ## Related
 
@@ -23,6 +24,8 @@ Lets users quickly answer practical questions such as what activates an automati
 - [Decision: Graph Contract and Service Projection](../decisions/005-graph-contract-and-service-projection.md)
 - [Pattern: Bounded Graph Querying](../knowledge/patterns/bounded-graph-querying.md)
 - [Pattern: Panel WebSocket Interaction](../knowledge/patterns/panel-websocket-interaction.md)
+- [Decision: Theme-Aware Panel Palette](../decisions/006-theme-aware-panel-palette.md)
+- [Pattern: Theme-Aware Panel Styling](../knowledge/patterns/theme-aware-panel-styling.md)
 
 ## Status
 

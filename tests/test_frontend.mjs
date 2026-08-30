@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { displayGraph, flowLayout, gridLayout } from "../custom_components/ha_flow_map/frontend/flow-map-model.js";
 
 const graph = {
@@ -40,4 +41,12 @@ const deviceTrigger = flowLayout(
   "automation:office",
 );
 assert.ok(deviceTrigger.get("device:motion").y < deviceTrigger.get("automation:office").y);
+const panelSource = await readFile(
+  new URL("../custom_components/ha_flow_map/frontend/ha-flow-map.js", import.meta.url),
+  "utf8",
+);
+assert.match(panelSource, /--bg:var\(--card-background-color\)/);
+assert.match(panelSource, /--accent:var\(--primary-color\)/);
+assert.match(panelSource, /themeColor\(name\)/);
+assert.doesNotMatch(panelSource, /#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\(/);
 console.log("frontend model tests: ok");

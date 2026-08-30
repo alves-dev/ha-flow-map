@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Flow Map now derives its panel, graph, and exported SVG/PNG colors from the
+  active Home Assistant theme instead of using a fixed dark palette.
+
 ## [Current State] - Context Mesh Added
 
 ### Existing Features (documented)
