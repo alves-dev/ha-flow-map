@@ -176,6 +176,95 @@ class ParserTests(unittest.TestCase):
         )
         self.assertEqual(index.search("office")[0]["type"], "automation")
 
+    def test_focused_flow_keeps_only_selected_owner_service_targets(self):
+        result = build_graph(
+            {
+                "automation.focused": {
+                    "actions": [
+                        {
+                            "action": "light.turn_on",
+                            "target": {"entity_id": "light.desk"},
+                        },
+                        {
+                            "action": "script.turn_on",
+                            "target": {"entity_id": "script.called"},
+                        },
+                    ]
+                },
+                "automation.other": {
+                    "actions": [
+                        {
+                            "action": "light.turn_on",
+                            "target": {"entity_id": "light.unrelated"},
+                        }
+                    ]
+                },
+            },
+            {
+                "script.called": {
+                    "sequence": [
+                        {
+                            "action": "light.turn_off",
+                            "target": {"entity_id": "light.inside_called_script"},
+                        }
+                    ]
+                }
+            },
+            {},
+        )
+
+        data = GraphIndex(result).focused_flow("automation:focused")
+        node_ids = {node["id"] for node in data["nodes"]}
+
+        self.assertEqual(data["mode"], "focused_flow")
+        self.assertIn("entity:light.desk", node_ids)
+        self.assertIn("script:called", node_ids)
+        self.assertNotIn("entity:light.unrelated", node_ids)
+        self.assertNotIn("entity:light.inside_called_script", node_ids)
+        self.assertTrue(
+            all(
+                edge["source"] in node_ids and edge["target"] in node_ids
+                for edge in data["edges"]
+            )
+        )
+
+    def test_focused_flow_keeps_direct_triggers_but_excludes_conditions(self):
+        data = GraphIndex(graph()).focused_flow("automation:office")
+        node_ids = {node["id"] for node in data["nodes"]}
+
+        self.assertIn("entity:binary_sensor.motion", node_ids)
+        self.assertTrue(
+            any(
+                edge["source"] == "entity:binary_sensor.motion"
+                and edge["target"] == "automation:office"
+                and edge["type"] == "triggers"
+                for edge in data["edges"]
+            )
+        )
+        self.assertNotIn("entity:input_boolean.enabled", node_ids)
+
+    def test_focused_flow_respects_node_limit(self):
+        result = build_graph(
+            {
+                "automation.focused": {
+                    "actions": [
+                        {
+                            "action": "light.turn_on",
+                            "target": {"entity_id": "light.desk"},
+                        }
+                    ]
+                }
+            },
+            {},
+            {},
+        )
+
+        data = GraphIndex(result).focused_flow("automation:focused", max_nodes=1)
+
+        self.assertEqual([node["id"] for node in data["nodes"]], ["automation:focused"])
+        self.assertEqual(data["edges"], [])
+        self.assertTrue(data["truncated"])
+
     def test_search_hides_entity_duplicate_of_configuration_node(self):
         result = graph()
         result.add_node(Node("entity:automation.office", "entity", "Office automation"))

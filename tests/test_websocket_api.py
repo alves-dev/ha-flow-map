@@ -80,6 +80,11 @@ class WebsocketApiTests(unittest.IsolatedAsyncioTestCase):
             self.connection.errors, [(1, "not_found", "Flow Map node not found")]
         )
 
+    async def test_flow_returns_focused_flow(self):
+        await self.call("ha_flow_map/flow", {"id": 1, "node_id": "automation:office"})
+
+        self.assertEqual(self.connection.results[0][1]["mode"], "focused_flow")
+
     async def test_rebuild_returns_updated_status(self):
         await self.call("ha_flow_map/rebuild", {"id": 1})
 

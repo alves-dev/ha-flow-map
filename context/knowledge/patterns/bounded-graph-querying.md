@@ -6,7 +6,7 @@ Build inbound and outbound indexes once, then use breadth-first traversal with e
 
 ## When to Use
 
-Use for any new graph query exposed to the panel or another consumer, especially when user input determines traversal scope.
+Use for any new graph query exposed to the panel or another consumer, especially when user input determines traversal scope. Apply the same limits to focused projections that intentionally traverse a complete owner flow.
 
 ## Pattern
 
@@ -32,7 +32,7 @@ while queue and len(seen) < max_nodes and len(selected) < max_edges:
 
 ## Files Using This Pattern
 
-- `custom_components/ha_flow_map/graph/index.py` — builds reverse indexes and runs neighborhood and impact traversal.
+- `custom_components/ha_flow_map/graph/index.py` — builds reverse indexes and runs neighborhood, focused-flow, and impact traversal.
 - `custom_components/ha_flow_map/websocket_api.py` — validates request bounds before querying.
 - `custom_components/ha_flow_map/frontend/ha-flow-map.js` — informs users when responses are limited.
 

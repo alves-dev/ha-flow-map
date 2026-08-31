@@ -48,5 +48,7 @@ const panelSource = await readFile(
 assert.match(panelSource, /--bg:var\(--card-background-color\)/);
 assert.match(panelSource, /--accent:var\(--primary-color\)/);
 assert.match(panelSource, /themeColor\(name\)/);
+assert.match(panelSource, /ha_flow_map\/flow/);
+assert.match(panelSource, /Ver fluxo completo/);
 assert.doesNotMatch(panelSource, /#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\(/);
 console.log("frontend model tests: ok");

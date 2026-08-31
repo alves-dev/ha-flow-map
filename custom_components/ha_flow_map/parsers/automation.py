@@ -75,7 +75,7 @@ class FlowParser:
             return refs, dynamic
         return [], False
 
-    def target(self, owner, target, relation, location):
+    def target(self, owner, target, relation, location, metadata=None):
         if not isinstance(target, dict):
             return
         values = target.get("entity_id", target.get("entity_ids"))
@@ -88,6 +88,7 @@ class FlowParser:
                 relation,
                 location,
                 "dynamic" if dynamic else "confirmed",
+                metadata,
             )
         for field, kind in (("device_id", "device"), ("area_id", "area")):
             values = target.get(field)
@@ -104,6 +105,7 @@ class FlowParser:
                     # UI do not mistake it for an action target.
                     relation if relation in {"targets", "triggers"} else "targets",
                     location,
+                    metadata=metadata,
                 )
 
     def condition(self, owner, config, location):
@@ -275,10 +277,15 @@ class FlowParser:
                     "data": _safe_data(
                         action.get("data", action.get("service_data", {}))
                     ),
+                    "flow_owner": self._flow_owner,
                 },
             )
             self.target(
-                service_id, action.get("target", action.get("data", {})), "targets", loc
+                service_id,
+                action.get("target", action.get("data", {})),
+                "targets",
+                loc,
+                {"flow_owner": self._flow_owner},
             )
             domain, _, object_id = service.partition(".")
             if domain in {"script", "automation", "scene"} and object_id not in {
@@ -323,6 +330,7 @@ class FlowParser:
                     self.edge(current, eid, "fires_event", loc)
 
     def parse_flow(self, node_id, config):
+        self._flow_owner = node_id
         self.triggers(
             node_id, config.get("triggers", config.get("trigger", [])), "triggers"
         )

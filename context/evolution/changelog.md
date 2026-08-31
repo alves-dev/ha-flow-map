@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- Focused flow now shows direct triggers and all direct output items of a
+  selected automation, script, or scene without increasing neighborhood depth
+  or including unrelated indirect relationships.
+
 ### Changed
 
 - Flow Map now derives its panel, graph, and exported SVG/PNG colors from the

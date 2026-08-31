@@ -13,6 +13,8 @@ Lets users quickly answer practical questions such as what activates an automati
 - [ ] Users can find supported items by name or identifier.
 - [ ] Users can explore inbound, outbound, or combined relationships.
 - [ ] Users can control the amount of surrounding context shown.
+- [x] When focused on an automation, users can view its direct triggers and
+  complete set of output items without adding unrelated indirect relationships.
 - [ ] The view communicates when the result is limited or contains dynamic references.
 - [x] The panel and its graph exports follow the active Home Assistant theme.
 
@@ -22,6 +24,7 @@ Lets users quickly answer practical questions such as what activates an automati
 - [Decision: Home Assistant Integration Boundary](../decisions/003-home-assistant-integration-boundary.md)
 - [Decision: Safe and Bounded Data Exposure](../decisions/004-safe-and-bounded-data-exposure.md)
 - [Decision: Graph Contract and Service Projection](../decisions/005-graph-contract-and-service-projection.md)
+- [Decision: Focused Flow Projection](../decisions/007-focused-flow-projection.md)
 - [Pattern: Bounded Graph Querying](../knowledge/patterns/bounded-graph-querying.md)
 - [Pattern: Panel WebSocket Interaction](../knowledge/patterns/panel-websocket-interaction.md)
 - [Decision: Theme-Aware Panel Palette](../decisions/006-theme-aware-panel-palette.md)
