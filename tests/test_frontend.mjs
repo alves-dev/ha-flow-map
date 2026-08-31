@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  automationStatus,
   describeAction,
   describeCondition,
   describeTrigger,
+  edgePresentation,
   displayGraph,
   flowLayout,
   gridLayout,
@@ -70,6 +72,26 @@ assert.equal(
     [{ source: "entity:binary_sensor.motion", type: "triggers", metadata: { trigger: "state", to: "on" } }],
   ),
   "Movimento foi ativado",
+);
+assert.deepEqual(
+  edgePresentation({ type: "next", location: "actions[0].parallel[1][0]" }),
+  { className: "parallel", label: "Em paralelo" },
+);
+assert.deepEqual(
+  edgePresentation({ type: "calls_script" }),
+  { className: "calls-flow", label: "Chama fluxo" },
+);
+assert.deepEqual(
+  edgePresentation({ type: "next", location: "actions[0].else[0]" }),
+  { className: "no", label: "Não" },
+);
+assert.deepEqual(
+  automationStatus({ metadata: { state: "on", available: true } }),
+  { className: "active", label: "Ativa" },
+);
+assert.deepEqual(
+  automationStatus({ metadata: { state: "unavailable", available: false } }),
+  { className: "unavailable", label: "Indisponível" },
 );
 const cyclic = flowLayout(
   [{ id: "automation:office" }, { id: "condition:enabled" }],

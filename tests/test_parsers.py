@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 import unittest
 
 from custom_components.ha_flow_map.graph.builder import build_graph
@@ -98,6 +99,32 @@ def graph():
 
 
 class ParserTests(unittest.TestCase):
+    def test_automation_nodes_keep_current_runtime_state(self):
+        result = build_graph(
+            {"automation.office": {"alias": "Office"}},
+            {},
+            {},
+            [
+                SimpleNamespace(
+                    entity_id="automation.office",
+                    state="off",
+                    attributes={"friendly_name": "Office"},
+                ),
+                SimpleNamespace(
+                    entity_id="sensor.unavailable",
+                    state="unavailable",
+                    attributes={},
+                ),
+            ],
+        )
+
+        automation = result.nodes["automation:office"]
+        entity = result.nodes["entity:sensor.unavailable"]
+
+        self.assertEqual(automation.metadata["state"], "off")
+        self.assertTrue(automation.metadata["available"])
+        self.assertFalse(entity.metadata["available"])
+
     def test_recursive_flow_and_relations(self):
         result = graph()
         self.assertIn("entity:binary_sensor.motion", result.nodes)

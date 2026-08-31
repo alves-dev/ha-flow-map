@@ -11,6 +11,9 @@
   supported conditional and parallel paths before the next configured action.
 - Supported actions, conditions, and triggers now use safe Portuguese
   descriptions derived from explicit configuration and friendly graph labels.
+- Flow connections now distinguish supported branches, parallel paths, and
+  calls into another configuration; automation nodes show their current state
+  and availability without representing execution history.
 
 ### Fixed
 

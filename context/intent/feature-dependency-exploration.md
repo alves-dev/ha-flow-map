@@ -19,6 +19,10 @@ Lets users quickly answer practical questions such as what activates an automati
   supported conditional or parallel paths.
 - [x] Supported actions, conditions, and triggers use plain-language
   descriptions without claiming certainty for dynamic configuration.
+- [x] Flow connections distinguish supported branches, parallel paths, and
+  calls into another configuration, while uncertainty remains visible.
+- [x] Automation nodes show their current active, disabled, unavailable, or
+  unknown state without implying that a flow path has executed.
 - [ ] The view communicates when the result is limited or contains dynamic references.
 - [x] The panel and its graph exports follow the active Home Assistant theme.
 
@@ -31,10 +35,12 @@ Lets users quickly answer practical questions such as what activates an automati
 - [Decision: Focused Flow Projection](../decisions/007-focused-flow-projection.md)
 - [Decision: Sequential Action Steps](../decisions/008-sequential-action-steps.md)
 - [Decision: Safe Flow Descriptions](../decisions/009-safe-flow-descriptions.md)
+- [Decision: Visual Flow Semantics and Runtime State](../decisions/010-visual-flow-semantics.md)
 - [Pattern: Bounded Graph Querying](../knowledge/patterns/bounded-graph-querying.md)
 - [Pattern: Panel WebSocket Interaction](../knowledge/patterns/panel-websocket-interaction.md)
 - [Pattern: Sequential Action Steps](../knowledge/patterns/sequential-action-steps.md)
 - [Pattern: Safe Flow Descriptions](../knowledge/patterns/safe-flow-descriptions.md)
+- [Pattern: Visual Flow Semantics](../knowledge/patterns/visual-flow-semantics.md)
 - [Decision: Theme-Aware Panel Palette](../decisions/006-theme-aware-panel-palette.md)
 - [Pattern: Theme-Aware Panel Styling](../knowledge/patterns/theme-aware-panel-styling.md)
 

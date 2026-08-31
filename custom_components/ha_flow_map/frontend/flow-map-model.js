@@ -192,3 +192,29 @@ export function describeTrigger(node, edges) {
   }
   return node.label;
 }
+
+/** Present an explicit graph relation without inferring execution history. */
+export function edgePresentation(edge) {
+  const location = edge.location || "";
+  if (location.includes(".else")) return { className: "no", label: "Não" };
+  if (location.includes(".then")) return { className: "yes", label: "Sim" };
+  if (location.includes(".parallel")) {
+    return { className: "parallel", label: "Em paralelo" };
+  }
+  if (["calls_script", "calls_automation", "activates_scene"].includes(edge.type)) {
+    return { className: "calls-flow", label: "Chama fluxo" };
+  }
+  if (edge.type === "next") return { className: "sequence", label: "" };
+  return { className: "", label: "" };
+}
+
+/** Current Home Assistant state, not an assertion about past flow execution. */
+export function automationStatus(node) {
+  const state = node.metadata?.state;
+  if (state === "on") return { className: "active", label: "Ativa" };
+  if (state === "off") return { className: "disabled", label: "Desativada" };
+  if (state === "unavailable" || node.metadata?.available === false) {
+    return { className: "unavailable", label: "Indisponível" };
+  }
+  return { className: "unknown", label: "Estado desconhecido" };
+}
