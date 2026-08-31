@@ -15,6 +15,8 @@ Lets users quickly answer practical questions such as what activates an automati
 - [ ] Users can control the amount of surrounding context shown.
 - [x] When focused on an automation, users can view its direct triggers and
   complete set of output items without adding unrelated indirect relationships.
+- [x] A flow communicates the configured order of actions and reconverges after
+  supported conditional or parallel paths.
 - [ ] The view communicates when the result is limited or contains dynamic references.
 - [x] The panel and its graph exports follow the active Home Assistant theme.
 
@@ -25,8 +27,10 @@ Lets users quickly answer practical questions such as what activates an automati
 - [Decision: Safe and Bounded Data Exposure](../decisions/004-safe-and-bounded-data-exposure.md)
 - [Decision: Graph Contract and Service Projection](../decisions/005-graph-contract-and-service-projection.md)
 - [Decision: Focused Flow Projection](../decisions/007-focused-flow-projection.md)
+- [Decision: Sequential Action Steps](../decisions/008-sequential-action-steps.md)
 - [Pattern: Bounded Graph Querying](../knowledge/patterns/bounded-graph-querying.md)
 - [Pattern: Panel WebSocket Interaction](../knowledge/patterns/panel-websocket-interaction.md)
+- [Pattern: Sequential Action Steps](../knowledge/patterns/sequential-action-steps.md)
 - [Decision: Theme-Aware Panel Palette](../decisions/006-theme-aware-panel-palette.md)
 - [Pattern: Theme-Aware Panel Styling](../knowledge/patterns/theme-aware-panel-styling.md)
 

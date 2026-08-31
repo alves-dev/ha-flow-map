@@ -7,6 +7,8 @@
 - Focused flow now shows direct triggers and all direct output items of a
   selected automation, script, or scene without increasing neighborhood depth
   or including unrelated indirect relationships.
+- Flow maps now model each configured action as an ordered step and reconnect
+  supported conditional and parallel paths before the next configured action.
 
 ### Changed
 

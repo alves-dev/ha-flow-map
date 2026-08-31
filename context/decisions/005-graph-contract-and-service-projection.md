@@ -8,7 +8,7 @@ The Flow Map needs a backend contract that preserves enough relationship detail 
 
 Use a graph payload with `nodes`, `edges`, and `warnings`. Nodes carry a stable namespaced ID, type, label, and metadata. Edges carry stable IDs, source, target, typed relation, confidence, discovery source, configuration location, and explanatory metadata. Preserve service calls as graph nodes and edges internally; let the panel hide service nodes by projecting a direct combined edge between surrounding nodes.
 
-The current contract includes node types for entity, automation, script, scene, service, event, device, area, condition, branch, and delay. It includes relationships such as triggers, reads_state, used_in_condition, targets, calls_service, calls_script, calls_automation, activates_scene, fires_event, listens_event, waits_for, and contains. The historic specification also reserves dashboard, card, and unknown nodes and additional relationship types for later work; those are not currently implemented.
+The current contract includes node types for entity, automation, script, scene, action, service, event, device, area, condition, branch, and delay. It includes relationships such as triggers, reads_state, used_in_condition, targets, calls_service, calls_script, calls_automation, activates_scene, fires_event, listens_event, waits_for, contains, and next. The historic specification also reserves dashboard, card, and unknown nodes and additional relationship types for later work; those are not currently implemented.
 
 ## Rationale
 
@@ -27,6 +27,7 @@ The panel supports a service-node toggle without rebuilding the backend graph. D
 - [Project Intent](../intent/project-intent.md)
 - [Decision: Graph-Based Relationship Model](002-graph-based-relationship-model.md)
 - [Decision: Focused Flow Projection](007-focused-flow-projection.md)
+- [Decision: Sequential Action Steps](008-sequential-action-steps.md)
 - [Decision: Tech Stack](001-tech-stack.md)
 - [Feature: Dependency Exploration](../intent/feature-dependency-exploration.md)
 - [Pattern: Graph Construction with Stable IDs](../knowledge/patterns/graph-construction-stable-ids.md)

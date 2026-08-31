@@ -265,6 +265,93 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(data["edges"], [])
         self.assertTrue(data["truncated"])
 
+    def test_action_steps_preserve_sequence_and_reconverge_after_if(self):
+        result = build_graph(
+            {
+                "automation.sequence": {
+                    "actions": [
+                        {"action": "light.turn_on"},
+                        {
+                            "if": [
+                                {
+                                    "condition": "state",
+                                    "entity_id": "input_boolean.enabled",
+                                }
+                            ],
+                            "then": [{"action": "switch.turn_on"}],
+                            "else": [{"action": "switch.turn_off"}],
+                        },
+                        {"action": "light.turn_off"},
+                    ]
+                }
+            },
+            {},
+            {},
+        )
+        action_nodes = {
+            node.metadata["location"]: node.id
+            for node in result.nodes.values()
+            if node.type == "action"
+        }
+        next_edges = {
+            (edge.source, edge.target)
+            for edge in result.edges.values()
+            if edge.type == "next"
+        }
+
+        first = action_nodes["actions[0]"]
+        then = action_nodes["actions[1].then[0]"]
+        otherwise = action_nodes["actions[1].else[0]"]
+        final = action_nodes["actions[2]"]
+        branch = next(
+            node.id
+            for node in result.nodes.values()
+            if node.type == "branch" and node.metadata["location"] == "actions[1]"
+        )
+
+        self.assertTrue(
+            any(
+                edge.source == first and edge.type == "calls_service"
+                for edge in result.edges.values()
+            )
+        )
+        self.assertIn((then, final), next_edges)
+        self.assertIn((otherwise, final), next_edges)
+        self.assertIn((first, branch), next_edges)
+
+    def test_action_steps_reconverge_after_parallel_paths(self):
+        result = build_graph(
+            {
+                "automation.parallel": {
+                    "actions": [
+                        {
+                            "parallel": [
+                                [{"action": "light.turn_on"}],
+                                [{"action": "switch.turn_on"}],
+                            ]
+                        },
+                        {"action": "notify.send"},
+                    ]
+                }
+            },
+            {},
+            {},
+        )
+        action_nodes = {
+            node.metadata["location"]: node.id
+            for node in result.nodes.values()
+            if node.type == "action"
+        }
+        next_edges = {
+            (edge.source, edge.target)
+            for edge in result.edges.values()
+            if edge.type == "next"
+        }
+        final = action_nodes["actions[1]"]
+
+        self.assertIn((action_nodes["actions[0].parallel[0][0]"], final), next_edges)
+        self.assertIn((action_nodes["actions[0].parallel[1][0]"], final), next_edges)
+
     def test_search_hides_entity_duplicate_of_configuration_node(self):
         result = graph()
         result.add_node(Node("entity:automation.office", "entity", "Office automation"))

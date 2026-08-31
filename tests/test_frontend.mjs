@@ -18,6 +18,15 @@ assert.equal(layout.get("automation:office").x, 120);
 assert.equal(layout.get("entity:light.desk").x, 370);
 const flow = flowLayout(compact.nodes, compact.edges);
 assert.ok(flow.get("entity:light.desk").y > flow.get("automation:office").y);
+const sequence = flowLayout(
+  [{ id: "automation:office" }, { id: "action:one" }, { id: "action:two" }],
+  [
+    { source: "automation:office", target: "action:one", type: "next" },
+    { source: "action:one", target: "action:two", type: "next" },
+  ],
+  "automation:office",
+);
+assert.ok(sequence.get("action:two").y > sequence.get("action:one").y);
 const cyclic = flowLayout(
   [{ id: "automation:office" }, { id: "condition:enabled" }],
   [
@@ -50,5 +59,6 @@ assert.match(panelSource, /--accent:var\(--primary-color\)/);
 assert.match(panelSource, /themeColor\(name\)/);
 assert.match(panelSource, /ha_flow_map\/flow/);
 assert.match(panelSource, /Ver fluxo completo/);
+assert.match(panelSource, /action:"AÇÃO"/);
 assert.doesNotMatch(panelSource, /#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\(/);
 console.log("frontend model tests: ok");
