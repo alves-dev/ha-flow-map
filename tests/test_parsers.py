@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 import unittest
 
 from custom_components.ha_flow_map.graph.builder import build_graph
@@ -98,6 +99,32 @@ def graph():
 
 
 class ParserTests(unittest.TestCase):
+    def test_automation_nodes_keep_current_runtime_state(self):
+        result = build_graph(
+            {"automation.office": {"alias": "Office"}},
+            {},
+            {},
+            [
+                SimpleNamespace(
+                    entity_id="automation.office",
+                    state="off",
+                    attributes={"friendly_name": "Office"},
+                ),
+                SimpleNamespace(
+                    entity_id="sensor.unavailable",
+                    state="unavailable",
+                    attributes={},
+                ),
+            ],
+        )
+
+        automation = result.nodes["automation:office"]
+        entity = result.nodes["entity:sensor.unavailable"]
+
+        self.assertEqual(automation.metadata["state"], "off")
+        self.assertTrue(automation.metadata["available"])
+        self.assertFalse(entity.metadata["available"])
+
     def test_recursive_flow_and_relations(self):
         result = graph()
         self.assertIn("entity:binary_sensor.motion", result.nodes)
@@ -175,6 +202,225 @@ class ParserTests(unittest.TestCase):
             any(edge["target"] == "automation:office" for edge in data["edges"])
         )
         self.assertEqual(index.search("office")[0]["type"], "automation")
+
+    def test_focused_flow_keeps_only_selected_owner_service_targets(self):
+        result = build_graph(
+            {
+                "automation.focused": {
+                    "actions": [
+                        {
+                            "action": "light.turn_on",
+                            "target": {"entity_id": "light.desk"},
+                        },
+                        {
+                            "action": "script.turn_on",
+                            "target": {"entity_id": "script.called"},
+                        },
+                    ]
+                },
+                "automation.other": {
+                    "actions": [
+                        {
+                            "action": "light.turn_on",
+                            "target": {"entity_id": "light.unrelated"},
+                        }
+                    ]
+                },
+            },
+            {
+                "script.called": {
+                    "sequence": [
+                        {
+                            "action": "light.turn_off",
+                            "target": {"entity_id": "light.inside_called_script"},
+                        }
+                    ]
+                }
+            },
+            {},
+        )
+
+        data = GraphIndex(result).focused_flow("automation:focused")
+        node_ids = {node["id"] for node in data["nodes"]}
+
+        self.assertEqual(data["mode"], "focused_flow")
+        self.assertIn("entity:light.desk", node_ids)
+        self.assertIn("script:called", node_ids)
+        self.assertNotIn("entity:light.unrelated", node_ids)
+        self.assertNotIn("entity:light.inside_called_script", node_ids)
+        self.assertTrue(
+            all(
+                edge["source"] in node_ids and edge["target"] in node_ids
+                for edge in data["edges"]
+            )
+        )
+
+    def test_focused_flow_keeps_direct_triggers_but_excludes_conditions(self):
+        data = GraphIndex(graph()).focused_flow("automation:office")
+        node_ids = {node["id"] for node in data["nodes"]}
+
+        self.assertIn("entity:binary_sensor.motion", node_ids)
+        self.assertTrue(
+            any(
+                edge["source"] == "entity:binary_sensor.motion"
+                and edge["target"] == "automation:office"
+                and edge["type"] == "triggers"
+                for edge in data["edges"]
+            )
+        )
+        self.assertNotIn("entity:input_boolean.enabled", node_ids)
+
+    def test_focused_flow_respects_node_limit(self):
+        result = build_graph(
+            {
+                "automation.focused": {
+                    "actions": [
+                        {
+                            "action": "light.turn_on",
+                            "target": {"entity_id": "light.desk"},
+                        }
+                    ]
+                }
+            },
+            {},
+            {},
+        )
+
+        data = GraphIndex(result).focused_flow("automation:focused", max_nodes=1)
+
+        self.assertEqual([node["id"] for node in data["nodes"]], ["automation:focused"])
+        self.assertEqual(data["edges"], [])
+        self.assertTrue(data["truncated"])
+
+    def test_action_steps_preserve_sequence_and_reconverge_after_if(self):
+        result = build_graph(
+            {
+                "automation.sequence": {
+                    "actions": [
+                        {"action": "light.turn_on"},
+                        {
+                            "if": [
+                                {
+                                    "condition": "state",
+                                    "entity_id": "input_boolean.enabled",
+                                }
+                            ],
+                            "then": [{"action": "switch.turn_on"}],
+                            "else": [{"action": "switch.turn_off"}],
+                        },
+                        {"action": "light.turn_off"},
+                    ]
+                }
+            },
+            {},
+            {},
+        )
+        action_nodes = {
+            node.metadata["location"]: node.id
+            for node in result.nodes.values()
+            if node.type == "action"
+        }
+        next_edges = {
+            (edge.source, edge.target)
+            for edge in result.edges.values()
+            if edge.type == "next"
+        }
+
+        first = action_nodes["actions[0]"]
+        then = action_nodes["actions[1].then[0]"]
+        otherwise = action_nodes["actions[1].else[0]"]
+        final = action_nodes["actions[2]"]
+        branch = next(
+            node.id
+            for node in result.nodes.values()
+            if node.type == "branch" and node.metadata["location"] == "actions[1]"
+        )
+
+        self.assertTrue(
+            any(
+                edge.source == first and edge.type == "calls_service"
+                for edge in result.edges.values()
+            )
+        )
+        self.assertIn((then, final), next_edges)
+        self.assertIn((otherwise, final), next_edges)
+        self.assertIn((first, branch), next_edges)
+
+    def test_flow_nodes_preserve_safe_description_metadata(self):
+        result = build_graph(
+            {
+                "automation.descriptions": {
+                    "triggers": [
+                        {
+                            "trigger": "state",
+                            "entity_id": "binary_sensor.motion",
+                            "to": "on",
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "condition": "state",
+                            "entity_id": "light.desk",
+                            "state": "off",
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "action": "light.turn_on",
+                            "target": {"entity_id": "light.desk"},
+                            "data": {"brightness_pct": 70, "token": "secret"},
+                        }
+                    ],
+                }
+            },
+            {},
+            {},
+        )
+        action = next(node for node in result.nodes.values() if node.type == "action")
+        condition = next(
+            node for node in result.nodes.values() if node.type == "condition"
+        )
+        trigger = next(
+            edge for edge in result.edges.values() if edge.type == "triggers"
+        )
+
+        self.assertEqual(action.metadata["target"], {"entity_id": "light.desk"})
+        self.assertEqual(action.metadata["data"]["token"], "<redacted>")
+        self.assertEqual(condition.metadata["state"], "off")
+        self.assertEqual(trigger.metadata["to"], "on")
+
+    def test_action_steps_reconverge_after_parallel_paths(self):
+        result = build_graph(
+            {
+                "automation.parallel": {
+                    "actions": [
+                        {
+                            "parallel": [
+                                [{"action": "light.turn_on"}],
+                                [{"action": "switch.turn_on"}],
+                            ]
+                        },
+                        {"action": "notify.send"},
+                    ]
+                }
+            },
+            {},
+            {},
+        )
+        action_nodes = {
+            node.metadata["location"]: node.id
+            for node in result.nodes.values()
+            if node.type == "action"
+        }
+        next_edges = {
+            (edge.source, edge.target)
+            for edge in result.edges.values()
+            if edge.type == "next"
+        }
+        final = action_nodes["actions[1]"]
+
+        self.assertIn((action_nodes["actions[0].parallel[0][0]"], final), next_edges)
+        self.assertIn((action_nodes["actions[0].parallel[1][0]"], final), next_edges)
 
     def test_search_hides_entity_duplicate_of_configuration_node(self):
         result = graph()

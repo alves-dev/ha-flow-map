@@ -81,6 +81,16 @@ def async_register_websocket_commands(hass):
                 msg["id"], coordinator.graph.nodes[msg["node_id"]].as_dict()
             )
             return
+        if msg["type"] == "ha_flow_map/flow":
+            connection.send_result(
+                msg["id"],
+                coordinator.index.focused_flow(
+                    msg["node_id"],
+                    msg.get("max_nodes", MAX_NODES),
+                    msg.get("max_edges", MAX_EDGES),
+                ),
+            )
+            return
         connection.send_result(
             msg["id"],
             coordinator.index.neighborhood(

@@ -14,6 +14,15 @@ SEARCHABLE_TYPES = {
     "area",
 }
 
+FLOW_INPUT_RELATIONS = {
+    "reads_state",
+    "used_in_condition",
+    "triggers",
+    "listens_event",
+    "waits_for",
+}
+FLOW_OWNER_TYPES = {"automation", "script", "scene"}
+
 
 class GraphIndex:
     def __init__(self, graph):
@@ -90,6 +99,97 @@ class GraphIndex:
             "edges": [edge.as_dict() for edge in selected],
             "warnings": self.graph.warnings,
             "truncated": truncated,
+        }
+
+    def focused_flow(self, node_id, max_nodes=250, max_edges=500):
+        """Return the selected owner's complete direct output flow.
+
+        Service nodes are intentionally shared across the graph. Once a service
+        call is reached, only targets from the same configuration location are
+        followed, preventing another owner's service targets from leaking into
+        this focused view.
+        """
+        max_nodes = max(1, min(int(max_nodes), 1000))
+        max_edges = max(1, min(int(max_edges), 2000))
+        seen = {node_id}
+        selected = []
+        selected_ids = set()
+        queue = deque([(node_id, None, None, None)])
+        visited = {(node_id, None, None, None)}
+        truncated = False
+
+        for edge in self.inbound[node_id]:
+            if edge.type not in {"triggers", "listens_event"}:
+                continue
+            trigger = edge.source
+            if trigger not in seen and len(seen) >= max_nodes:
+                truncated = True
+                break
+            if len(selected) >= max_edges:
+                truncated = True
+                break
+            seen.add(trigger)
+            selected.append(edge)
+            selected_ids.add(edge.id)
+
+        while queue and not truncated:
+            current, service_location, source_kind, flow_owner = queue.popleft()
+            node = self.graph.nodes.get(current)
+            if not node:
+                continue
+            candidates = self.outbound[current]
+            if node.type == "service":
+                candidates = [
+                    edge
+                    for edge in candidates
+                    if edge.location == service_location
+                    and edge.source_kind == source_kind
+                    and edge.metadata.get("flow_owner") == flow_owner
+                ]
+            for edge in candidates:
+                if edge.type in FLOW_INPUT_RELATIONS:
+                    continue
+                target = edge.target
+                if target not in seen and len(seen) >= max_nodes:
+                    truncated = True
+                    continue
+                if edge.id not in selected_ids:
+                    if len(selected) >= max_edges:
+                        truncated = True
+                        break
+                    selected.append(edge)
+                    selected_ids.add(edge.id)
+                if target not in seen:
+                    seen.add(target)
+                target_node = self.graph.nodes.get(target)
+                if (
+                    target_node
+                    and target_node.type in FLOW_OWNER_TYPES
+                    and target != node_id
+                ):
+                    continue
+                context = (
+                    (edge.location, edge.source_kind, edge.metadata.get("flow_owner"))
+                    if target_node and target_node.type == "service"
+                    else (None, None, None)
+                )
+                state = (target, *context)
+                if state not in visited:
+                    visited.add(state)
+                    queue.append(state)
+            if truncated:
+                break
+
+        return {
+            "nodes": [
+                self.graph.nodes[item].as_dict()
+                for item in seen
+                if item in self.graph.nodes
+            ],
+            "edges": [edge.as_dict() for edge in selected],
+            "warnings": self.graph.warnings,
+            "truncated": truncated,
+            "mode": "focused_flow",
         }
 
     def impact(self, node_id, max_depth=12, max_nodes=1000):
