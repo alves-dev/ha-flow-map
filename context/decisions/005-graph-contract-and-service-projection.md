@@ -28,6 +28,7 @@ The panel supports a service-node toggle without rebuilding the backend graph. D
 - [Decision: Graph-Based Relationship Model](002-graph-based-relationship-model.md)
 - [Decision: Focused Flow Projection](007-focused-flow-projection.md)
 - [Decision: Sequential Action Steps](008-sequential-action-steps.md)
+- [Decision: Safe Flow Descriptions](009-safe-flow-descriptions.md)
 - [Decision: Tech Stack](001-tech-stack.md)
 - [Feature: Dependency Exploration](../intent/feature-dependency-exploration.md)
 - [Pattern: Graph Construction with Stable IDs](../knowledge/patterns/graph-construction-stable-ids.md)

@@ -1,27 +1,16 @@
-import { displayGraph, flowLayout } from "./flow-map-model.js";
+import { describeAction, describeCondition, describeTrigger, displayGraph, flowLayout } from "./flow-map-model.js?v=20260831-1";
 
 const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[char]));
 const typeIcon = {entity:"mdi:chip",automation:"mdi:robot",script:"mdi:script-text",scene:"mdi:palette",action:"mdi:play",service:"mdi:flash",condition:"mdi:help-circle",branch:"mdi:source-branch",delay:"mdi:timer",event:"mdi:calendar-clock",device:"mdi:devices",area:"mdi:floor-plan"};
 const typeGlyph = {entity:"◉",automation:"⚙",script:"⌘",scene:"◈",action:"▶",service:"ϟ",condition:"?",branch:"⑂",delay:"◷",event:"✦",device:"▣",area:"⌂",dashboard:"▤",card:"▧"};
 const typeName = {automation:"AUTOMAÇÃO",script:"SCRIPT",scene:"CENA",action:"AÇÃO",service:"SERVIÇO",condition:"CONDIÇÃO",branch:"RAMIFICAÇÃO",delay:"ESPERA",event:"EVENTO",entity:"ENTIDADE",device:"DISPOSITIVO",area:"ÁREA"};
 const domainGlyph = {light:"💡",switch:"⏻",binary_sensor:"◉",sensor:"◌",climate:"♨",media_player:"▶",lock:"▣",cover:"▤",person:"●",device_tracker:"⌖"};
-const serviceTitle = (label) => {
-  const [domain, action] = String(label).split(".");
-  const verb = {turn_on:"Ligar",turn_off:"Desligar",toggle:"Alternar",open_cover:"Abrir",close_cover:"Fechar",stop:"Parar",start:"Iniciar",activate:"Ativar",play_media:"Reproduzir",notify:"Enviar notificação"}[action];
-  if (!verb) return label;
-  const object = {light:"luz",switch:"interruptor",cover:"cobertura",script:"script",scene:"cena",media_player:"mídia",climate:"clima"}[domain];
-  return object ? `${verb} ${object}` : verb;
-};
 const entityDomain = (node) => node.metadata?.domain || node.id.replace(/^entity:/, "").split(".")[0];
-const nodeRole = (node, edges) => ["entity", "device", "area"].includes(node.type) && edges.some((edge) => edge.source === node.id && ["triggers", "listens_event"].includes(edge.type)) ? "trigger" : node.type;
-const nodeTitle = (node, edges, byId) => {
-  if (node.type === "service" || node.type === "action") return serviceTitle(node.label);
-  if (node.type === "condition") {
-    const source = edges.find((edge) => edge.target === node.id && edge.type === "used_in_condition");
-    const entity = source && byId.get(source.source);
-    if (entity) return `${entity.label} está ativo?`;
-    return node.label === "state" ? "Condição de estado?" : `${node.label}?`;
-  }
+const nodeRole = (node, edges) => ["entity", "device", "area", "event"].includes(node.type) && edges.some((edge) => edge.source === node.id && ["triggers", "listens_event"].includes(edge.type)) ? "trigger" : node.type;
+const nodeTitle = (node, role, edges, byId) => {
+  if (role === "trigger") return describeTrigger(node, edges);
+  if (node.type === "service" || node.type === "action") return describeAction(node, byId);
+  if (node.type === "condition") return describeCondition(node, edges, byId);
   if (node.type === "delay") return node.label === "Delay / wait" ? "Aguardar" : node.label;
   return node.label;
 };
@@ -58,7 +47,7 @@ class HaFlowMapPanel extends HTMLElement {
     const layout=flowLayout(nodes,edges,this._selected); this._positions??=new Map(); for(const [id,position] of layout){const saved=this._positions.get(id);if(saved){position.x=saved.x;position.y=saved.y;}} this.fitGraphToCanvas(layout); const edgeGroup=this.querySelector("#edges"), nodeGroup=this.querySelector("#nodes"), empty=this.querySelector("#empty"), byId=new Map(nodes.map(node=>[node.id,node])); empty.style.display=nodes.length?"none":"block";
     const edgePoint=(from,to,inset=0)=>{const dx=to.x-from.x,dy=to.y-from.y,distance=Math.hypot(dx,dy)||1,scale=1/Math.max(Math.abs(dx)/108,Math.abs(dy)/34,0.0001);return{x:from.x+dx*(scale+inset/distance),y:from.y+dy*(scale+inset/distance)}};
     edgeGroup.innerHTML=edges.map(edge=>{const a=layout.get(edge.source),b=layout.get(edge.target);if(!a||!b)return"";const start=edgePoint(a,b,3),end=edgePoint(b,a,10),dynamic=edge.confidence==="dynamic"||edge.confidence==="inferred",path=edge.location?.includes(".else")?"no":edge.location?.includes(".then")?"yes":"";const label=path?`<text class="edge-label ${path}" x="${(start.x+end.x)/2}" y="${(start.y+end.y)/2-7}" text-anchor="middle">${path==="yes"?"Sim":"Não"}</text>`:"";return `<line class="${esc(edge.confidence)} ${path}" marker-end="url(#arrow-${dynamic?"dynamic":"confirmed"})" x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}"><title>${esc(edge.type)} (${esc(edge.confidence)}): ${esc(edge.source)} → ${esc(edge.target)}</title></line>${label}`;}).join("");
-    nodeGroup.innerHTML=[...layout.values()].map(({x,y,node})=>{const role=nodeRole(node,edges), title=nodeTitle(node,edges,byId), subtitle=nodeSubtitle(node,role), shape=node.type==="condition"?`<path class="node-shape" d="M-108,0 L-81,-35 L81,-35 L108,0 L81,35 L-81,35 Z"></path>`:`<rect class="node-shape" x="-108" y="-34" width="216" height="68" rx="${role==="trigger"||node.type==="event"?34:node.type==="delay"?7:12}"></rect>`;return `<g class="node ${esc(node.type)} ${esc(role)} ${node.id===this._selected?"selected":""}" data-id="${esc(node.id)}" transform="translate(${x},${y})">${shape}<text class="node-icon" x="-88" y="7" text-anchor="middle">${nodeGlyph(node,role)}</text><text class="node-title" x="-66" y="-5">${esc(title).slice(0,27)}</text><text class="kind" x="-66" y="15">${esc(subtitle).slice(0,35)}</text>${node.type==="automation"?`<circle class="status-dot" cx="90" cy="-19" r="4"></circle>`:""}</g>`;}).join(""); this.enableNodeDrag(nodeGroup,layout,data);
+    nodeGroup.innerHTML=[...layout.values()].map(({x,y,node})=>{const role=nodeRole(node,edges), title=nodeTitle(node,role,edges,byId), subtitle=nodeSubtitle(node,role), shape=node.type==="condition"?`<path class="node-shape" d="M-108,0 L-81,-35 L81,-35 L108,0 L81,35 L-81,35 Z"></path>`:`<rect class="node-shape" x="-108" y="-34" width="216" height="68" rx="${role==="trigger"||node.type==="event"?34:node.type==="delay"?7:12}"></rect>`;return `<g class="node ${esc(node.type)} ${esc(role)} ${node.id===this._selected?"selected":""}" data-id="${esc(node.id)}" transform="translate(${x},${y})">${shape}<text class="node-icon" x="-88" y="7" text-anchor="middle">${nodeGlyph(node,role)}</text><text class="node-title" x="-66" y="-5">${esc(title).slice(0,27)}</text><text class="kind" x="-66" y="15">${esc(subtitle).slice(0,35)}</text>${node.type==="automation"?`<circle class="status-dot" cx="90" cy="-19" r="4"></circle>`:""}</g>`;}).join(""); this.enableNodeDrag(nodeGroup,layout,data);
     if(data.truncated&&!this.querySelector("#details .warning")){const message=data.mode==="focused_flow"?"O fluxo focado atingiu o limite de itens.":"O resultado foi limitado; selecione outro nó para continuar.";this.querySelector("#details").insertAdjacentHTML("afterbegin",`<p class='warning'>${message}</p>`);}
   }
   fitGraphToCanvas(layout) { if(!layout.size)return; const points=[...layout.values()],padding=145; let minX=Math.min(...points.map(point=>point.x))-padding,maxX=Math.max(...points.map(point=>point.x))+padding,minY=Math.min(...points.map(point=>point.y))-padding,maxY=Math.max(...points.map(point=>point.y))+padding; if(maxX-minX<1000){const center=(minX+maxX)/2;minX=center-500;maxX=center+500;} if(maxY-minY<620){const center=(minY+maxY)/2;minY=center-310;maxY=center+310;} this.querySelector("#graph").setAttribute("viewBox",`${minX} ${minY} ${maxX-minX} ${maxY-minY}`); }

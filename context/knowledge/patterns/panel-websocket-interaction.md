@@ -12,6 +12,11 @@ Use when adding an action, query, or status capability to the Flow Map panel.
 
 Register a schema-validated command in the backend, return a predictable result or named error, apply authorization where needed, then call the command from the panel through a single helper method.
 
+When the panel imports a local ES-module helper, give that helper its own versioned
+module URL. The panel module's cache-busting query does not automatically apply
+to relative imports, so an unversioned helper can otherwise remain stale after
+the panel is updated.
+
 ## Example
 
 ```python
@@ -37,6 +42,8 @@ call(type, payload = {}) {
 
 - `custom_components/ha_flow_map/websocket_api.py` — command schemas, bounded inputs, result handling, and administrator-only rebuild.
 - `custom_components/ha_flow_map/frontend/ha-flow-map.js` — central panel call helper and UI event handlers.
+- `custom_components/ha_flow_map/frontend/flow-map-model.js` — versioned helper
+  import kept coherent with the panel module.
 - `custom_components/ha_flow_map/panel.py` — serves and registers the panel module.
 
 ## Related

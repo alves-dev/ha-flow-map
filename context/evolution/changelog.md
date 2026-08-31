@@ -9,6 +9,13 @@
   or including unrelated indirect relationships.
 - Flow maps now model each configured action as an ordered step and reconnect
   supported conditional and parallel paths before the next configured action.
+- Supported actions, conditions, and triggers now use safe Portuguese
+  descriptions derived from explicit configuration and friendly graph labels.
+
+### Fixed
+
+- Versioned the panel's local graph-helper import to prevent stale browser
+  caches from loading an incompatible module after a panel update.
 
 ### Changed
 

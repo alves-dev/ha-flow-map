@@ -26,6 +26,7 @@ Outcomes to be documented as the project evolves.
 - [Feature: Relationship Discovery](../intent/feature-relationship-discovery.md)
 - [Feature: Dependency Exploration](../intent/feature-dependency-exploration.md)
 - [Feature: Change-Impact Summaries](../intent/feature-impact-summaries.md)
+- [Decision: Safe Flow Descriptions](009-safe-flow-descriptions.md)
 - [Pattern: Bounded Graph Querying](../knowledge/patterns/bounded-graph-querying.md)
 - [Pattern: Recursive Flow Parsing](../knowledge/patterns/recursive-flow-parsing.md)
 

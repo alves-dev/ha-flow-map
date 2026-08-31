@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { displayGraph, flowLayout, gridLayout } from "../custom_components/ha_flow_map/frontend/flow-map-model.js";
+import {
+  describeAction,
+  describeCondition,
+  describeTrigger,
+  displayGraph,
+  flowLayout,
+  gridLayout,
+} from "../custom_components/ha_flow_map/frontend/flow-map-model.js";
 
 const graph = {
   nodes: [{ id: "automation:office", type: "automation" }, { id: "service:light.turn_on", type: "service" }, { id: "entity:light.desk", type: "entity" }],
@@ -27,6 +34,43 @@ const sequence = flowLayout(
   "automation:office",
 );
 assert.ok(sequence.get("action:two").y > sequence.get("action:one").y);
+const descriptions = new Map([
+  ["entity:light.desk", { id: "entity:light.desk", label: "Luz da mesa", metadata: { domain: "light" } }],
+  ["entity:binary_sensor.motion", { id: "entity:binary_sensor.motion", label: "Movimento", metadata: { domain: "binary_sensor" } }],
+]);
+assert.equal(
+  describeAction(
+    {
+      label: "light.turn_on",
+      metadata: {
+        service: "light.turn_on",
+        target: { entity_id: "light.desk" },
+        data: { brightness_pct: 70 },
+      },
+    },
+    descriptions,
+  ),
+  "Ajustar Luz da mesa para 70%",
+);
+assert.equal(
+  describeCondition(
+    {
+      id: "condition:desk",
+      label: "state",
+      metadata: { condition: "state", state: "off" },
+    },
+    [{ source: "entity:light.desk", target: "condition:desk", type: "used_in_condition" }],
+    descriptions,
+  ),
+  "Luz da mesa está desligada?",
+);
+assert.equal(
+  describeTrigger(
+    { id: "entity:binary_sensor.motion", label: "Movimento", type: "entity" },
+    [{ source: "entity:binary_sensor.motion", type: "triggers", metadata: { trigger: "state", to: "on" } }],
+  ),
+  "Movimento foi ativado",
+);
 const cyclic = flowLayout(
   [{ id: "automation:office" }, { id: "condition:enabled" }],
   [
@@ -60,5 +104,7 @@ assert.match(panelSource, /themeColor\(name\)/);
 assert.match(panelSource, /ha_flow_map\/flow/);
 assert.match(panelSource, /Ver fluxo completo/);
 assert.match(panelSource, /action:"AÇÃO"/);
+assert.match(panelSource, /flow-map-model\.js\?v=/);
+assert.match(panelSource, /nodeTitle\(node,role,edges,byId\)/);
 assert.doesNotMatch(panelSource, /#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\(/);
 console.log("frontend model tests: ok");

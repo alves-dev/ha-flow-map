@@ -319,6 +319,49 @@ class ParserTests(unittest.TestCase):
         self.assertIn((otherwise, final), next_edges)
         self.assertIn((first, branch), next_edges)
 
+    def test_flow_nodes_preserve_safe_description_metadata(self):
+        result = build_graph(
+            {
+                "automation.descriptions": {
+                    "triggers": [
+                        {
+                            "trigger": "state",
+                            "entity_id": "binary_sensor.motion",
+                            "to": "on",
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "condition": "state",
+                            "entity_id": "light.desk",
+                            "state": "off",
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "action": "light.turn_on",
+                            "target": {"entity_id": "light.desk"},
+                            "data": {"brightness_pct": 70, "token": "secret"},
+                        }
+                    ],
+                }
+            },
+            {},
+            {},
+        )
+        action = next(node for node in result.nodes.values() if node.type == "action")
+        condition = next(
+            node for node in result.nodes.values() if node.type == "condition"
+        )
+        trigger = next(
+            edge for edge in result.edges.values() if edge.type == "triggers"
+        )
+
+        self.assertEqual(action.metadata["target"], {"entity_id": "light.desk"})
+        self.assertEqual(action.metadata["data"]["token"], "<redacted>")
+        self.assertEqual(condition.metadata["state"], "off")
+        self.assertEqual(trigger.metadata["to"], "on")
+
     def test_action_steps_reconverge_after_parallel_paths(self):
         result = build_graph(
             {

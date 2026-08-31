@@ -69,3 +69,126 @@ export function flowLayout(nodes, edges, rootId) {
   }
   return layout;
 }
+
+const actionVerb = {
+  activate: "Ativar",
+  close_cover: "Fechar",
+  lock: "Trancar",
+  open_cover: "Abrir",
+  play_media: "Reproduzir",
+  start: "Iniciar",
+  stop: "Parar",
+  toggle: "Alternar",
+  turn_off: "Desligar",
+  turn_on: "Ligar",
+  unlock: "Destrancar",
+};
+
+const domainNoun = {
+  climate: "clima",
+  cover: "cobertura",
+  light: "luz",
+  lock: "fechadura",
+  media_player: "mídia",
+  scene: "cena",
+  script: "script",
+  switch: "interruptor",
+};
+
+function entityIds(value) {
+  if (typeof value === "string") return value === "<template>" ? [] : [value];
+  if (Array.isArray(value)) return value.flatMap(entityIds);
+  return [];
+}
+
+function actionTargets(node) {
+  const target = node.metadata?.target || {};
+  return entityIds(target.entity_id ?? target.entity_ids);
+}
+
+function targetLabel(entityId, byId) {
+  return byId?.get(`entity:${entityId}`)?.label || entityId;
+}
+
+export function describeAction(node, byId) {
+  const service = node.metadata?.service || node.label;
+  const [domain, action] = String(service).split(".");
+  if (domain === "notify") return "Enviar notificação";
+  const verb = actionVerb[action];
+  if (!verb) return service;
+  const targets = actionTargets(node);
+  const noun = domainNoun[domain];
+  const data = node.metadata?.data || {};
+  if (domain === "light" && action === "turn_on" && targets.length === 1) {
+    const brightness = data.brightness_pct;
+    if (typeof brightness === "number") {
+      return `Ajustar ${targetLabel(targets[0], byId)} para ${brightness}%`;
+    }
+  }
+  if (targets.length === 1) return `${verb} ${targetLabel(targets[0], byId)}`;
+  if (targets.length > 1 && noun) return `${verb} ${targets.length} ${noun}s`;
+  return noun ? `${verb} ${noun}` : verb;
+}
+
+function conditionEntity(node, edges, byId) {
+  const edge = edges.find(
+    (item) => item.target === node.id && item.type === "used_in_condition",
+  );
+  return edge && byId?.get(edge.source);
+}
+
+export function describeCondition(node, edges, byId) {
+  const type = node.metadata?.condition || node.label;
+  const entity = conditionEntity(node, edges, byId);
+  const label = entity?.label;
+  const state = node.metadata?.state;
+  if (type === "and") return "Todas as condições são verdadeiras?";
+  if (type === "or") return "Alguma condição é verdadeira?";
+  if (type === "not") return "A condição abaixo é falsa?";
+  if (type === "template") return "Avaliar condição personalizada";
+  if (type === "numeric_state" && label) {
+    if (node.metadata?.above != null && node.metadata?.below != null) {
+      return `${label} está entre ${node.metadata.above} e ${node.metadata.below}?`;
+    }
+    if (node.metadata?.above != null) return `${label} está acima de ${node.metadata.above}?`;
+    if (node.metadata?.below != null) return `${label} está abaixo de ${node.metadata.below}?`;
+  }
+  if (type === "state" && label && state !== "<template>") {
+    if (state === "home") return `${label} está em casa?`;
+    if (state === "not_home") return `${label} está fora de casa?`;
+    if (state === "on") {
+      return entity.metadata?.domain === "binary_sensor"
+        ? `${label} está ativo?`
+        : entity.metadata?.domain === "light"
+          ? `${label} está ligada?`
+          : `${label} está ligado?`;
+    }
+    if (state === "off") {
+      return entity.metadata?.domain === "binary_sensor"
+        ? `${label} está inativo?`
+        : entity.metadata?.domain === "light"
+          ? `${label} está desligada?`
+          : `${label} está desligado?`;
+    }
+    if (state != null) return `${label} está em ${state}?`;
+  }
+  return label ? `Verificar ${label}` : `Condição: ${type}`;
+}
+
+export function describeTrigger(node, edges) {
+  const edge = edges.find(
+    (item) => item.source === node.id && ["triggers", "listens_event"].includes(item.type),
+  );
+  const trigger = edge?.metadata?.trigger;
+  const state = edge?.metadata?.to;
+  if (node.type === "event") return `Evento ${node.label} recebido`;
+  if (trigger === "state" && state !== "<template>") {
+    if (state === "on") return `${node.label} foi ativado`;
+    if (state === "off") return `${node.label} foi desativado`;
+    if (state != null) return `${node.label} mudou para ${state}`;
+  }
+  if (trigger === "numeric_state" && edge?.metadata?.above != null) {
+    return `${node.label} passou de ${edge.metadata.above}`;
+  }
+  return node.label;
+}

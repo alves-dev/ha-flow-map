@@ -54,12 +54,16 @@ class FlowParser:
             )
         )
 
-    def _struct(self, parent, kind, label, location, relation="contains"):
+    def _struct(
+        self, parent, kind, label, location, relation="contains", metadata=None
+    ):
         parents = [parent] if isinstance(parent, str) else list(parent)
         self._sequence += 1
         node_owner = parents[0] if len(parents) == 1 else self._flow_owner
         node_id = f"{node_owner}:{kind}:{self._sequence}"
-        self.graph.add_node(Node(node_id, kind, label, {"location": location}))
+        self.graph.add_node(
+            Node(node_id, kind, label, {"location": location, **(metadata or {})})
+        )
         for item in parents:
             self.edge(item, node_id, relation, location)
         return node_id
@@ -117,12 +121,25 @@ class FlowParser:
         for index, item in enumerate(items):
             if not isinstance(item, dict):
                 continue
+            metadata = {"condition": item.get("condition", "condition")}
+            for key in (
+                "entity_id",
+                "entity_ids",
+                "state",
+                "above",
+                "below",
+                "after",
+                "before",
+            ):
+                if key in item:
+                    metadata[key] = _safe_data(item[key])
             node = self._struct(
                 owner,
                 "condition",
                 item.get("condition", "condition"),
                 f"{location}[{index}]",
                 relation,
+                metadata,
             )
             created.append(node)
             values, dynamic = self._entity_values(
@@ -164,6 +181,10 @@ class FlowParser:
         for index, item in enumerate(config if isinstance(config, list) else [config]):
             if not isinstance(item, dict):
                 continue
+            metadata = {"trigger": item.get("trigger", "trigger")}
+            for key in ("to", "from", "event_type", "at", "above", "below"):
+                if key in item:
+                    metadata[key] = _safe_data(item[key])
             values = item.get("entity_id", item.get("entity_ids"))
             refs, dynamic = self._entity_values(values)
             for entity_id in refs:
@@ -173,6 +194,7 @@ class FlowParser:
                     relation,
                     f"{location}[{index}]",
                     "dynamic" if dynamic else "confirmed",
+                    metadata,
                 )
             # Device and area triggers have no entity reference but remain discoverable.
             # Device-trigger automations place their selector under ``target``;
@@ -183,11 +205,18 @@ class FlowParser:
                 target if isinstance(target, dict) else item,
                 "triggers",
                 f"{location}[{index}]",
+                metadata,
             )
             if item.get("trigger") == "event" and item.get("event_type"):
                 eid = f"event:{item['event_type']}"
                 self.graph.add_node(Node(eid, "event", item["event_type"]))
-                self.edge(eid, owner, "listens_event", f"{location}[{index}]")
+                self.edge(
+                    eid,
+                    owner,
+                    "listens_event",
+                    f"{location}[{index}]",
+                    metadata=metadata,
+                )
 
     def actions(self, owner, config, location="actions"):
         tails = [owner] if isinstance(owner, str) else list(owner)
@@ -293,7 +322,12 @@ class FlowParser:
             return self._unique([branch, *sequence_tails])
         service = action.get("action", action.get("service"))
         label = service if isinstance(service, str) else "Action"
-        current = self._struct(parents, "action", label, location, "next")
+        metadata = {
+            "service": service,
+            "data": _safe_data(action.get("data", action.get("service_data", {}))),
+            "target": _safe_data(action.get("target", action.get("data", {}))),
+        }
+        current = self._struct(parents, "action", label, location, "next", metadata)
         if not isinstance(service, str):
             return [current]
         self._service_action(current, service, action, location)
@@ -408,4 +442,4 @@ def _safe_data(value: Any):
             return [sanitize(nested) for nested in item]
         return item
 
-    return sanitize(value) if isinstance(value, dict) else {}
+    return sanitize(value)
