@@ -5,6 +5,7 @@ from custom_components.ha_flow_map.graph.builder import build_graph
 from custom_components.ha_flow_map.graph.index import GraphIndex
 from custom_components.ha_flow_map.graph.model import Node
 from custom_components.ha_flow_map.parsers.automation import _safe_data
+from custom_components.ha_flow_map.parsers.template import references
 
 
 def graph():
@@ -292,6 +293,25 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(data["edges"], [])
         self.assertTrue(data["truncated"])
 
+    def test_focused_flow_respects_edge_limit(self):
+        result = build_graph(
+            {
+                "automation.focused": {
+                    "actions": [
+                        {"action": "light.turn_on"},
+                        {"action": "switch.turn_on"},
+                    ]
+                }
+            },
+            {},
+            {},
+        )
+
+        data = GraphIndex(result).focused_flow("automation:focused", max_edges=1)
+
+        self.assertEqual(len(data["edges"]), 1)
+        self.assertTrue(data["truncated"])
+
     def test_action_steps_preserve_sequence_and_reconverge_after_if(self):
         result = build_graph(
             {
@@ -428,6 +448,13 @@ class ParserTests(unittest.TestCase):
         index = GraphIndex(result)
         matches = index.search("office")
         self.assertEqual([item["id"] for item in matches], ["automation:office"])
+
+    def test_template_references_are_sorted_and_non_strings_are_ignored(self):
+        self.assertEqual(
+            references("{{ states('light.kitchen') }} sensor.motion"),
+            (["light.kitchen", "sensor.motion"], True),
+        )
+        self.assertEqual(references(None), ([], False))
 
     def test_impact_finds_configuration_owners_in_both_directions(self):
         impact = GraphIndex(graph()).impact("entity:binary_sensor.motion")

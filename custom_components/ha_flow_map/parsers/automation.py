@@ -87,6 +87,10 @@ class FlowParser:
             return
         values = target.get("entity_id", target.get("entity_ids"))
         refs, dynamic = self._entity_values(values)
+        self._entity_targets(owner, refs, relation, location, dynamic, metadata)
+        self._selector_targets(owner, target, relation, location, metadata)
+
+    def _entity_targets(self, owner, refs, relation, location, dynamic, metadata):
         for entity_id in refs:
             target_id = entity_node(self.graph, entity_id)
             self.edge(
@@ -97,6 +101,8 @@ class FlowParser:
                 "dynamic" if dynamic else "confirmed",
                 metadata,
             )
+
+    def _selector_targets(self, owner, target, relation, location, metadata):
         for field, kind in (("device_id", "device"), ("area_id", "area")):
             values = target.get(field)
             if not values:
@@ -121,70 +127,83 @@ class FlowParser:
         for index, item in enumerate(items):
             if not isinstance(item, dict):
                 continue
-            metadata = {"condition": item.get("condition", "condition")}
-            for key in (
-                "entity_id",
-                "entity_ids",
-                "state",
-                "above",
-                "below",
-                "after",
-                "before",
-            ):
-                if key in item:
-                    metadata[key] = _safe_data(item[key])
+            item_location = f"{location}[{index}]"
+            metadata = self._condition_metadata(item)
             node = self._struct(
                 owner,
                 "condition",
-                item.get("condition", "condition"),
-                f"{location}[{index}]",
+                metadata["condition"],
+                item_location,
                 relation,
                 metadata,
             )
             created.append(node)
-            values, dynamic = self._entity_values(
-                item.get("entity_id", item.get("entity_ids"))
-            )
-            for entity_id in values:
-                self.edge(
-                    entity_node(self.graph, entity_id),
-                    node,
-                    "used_in_condition",
-                    f"{location}[{index}]",
-                    "dynamic" if dynamic else "confirmed",
-                )
+            self._condition_entities(node, item, item_location)
             self.target(
                 node,
                 {key: item[key] for key in ("device_id", "area_id") if key in item},
                 "used_in_condition",
-                f"{location}[{index}]",
+                item_location,
             )
-            for key in ("conditions", "condition"):
-                nested = item.get(key)
-                if isinstance(nested, (dict, list)) and nested is not item:
-                    created.extend(
-                        self.condition(node, nested, f"{location}[{index}].{key}")
-                    )
-            for value in item.values():
-                refs, dynamic = self._entity_values(value)
-                for entity in refs:
-                    self.edge(
-                        node,
-                        entity_node(self.graph, entity),
-                        "reads_state",
-                        location,
-                        "dynamic" if dynamic else "confirmed",
-                    )
+            created.extend(self._nested_conditions(node, item, item_location))
+            self._condition_reads(node, item, location)
         return created
+
+    @staticmethod
+    def _condition_metadata(item):
+        metadata = {"condition": item.get("condition", "condition")}
+        for key in (
+            "entity_id",
+            "entity_ids",
+            "state",
+            "above",
+            "below",
+            "after",
+            "before",
+        ):
+            if key in item:
+                metadata[key] = _safe_data(item[key])
+        return metadata
+
+    def _condition_entities(self, node, item, location):
+        values, dynamic = self._entity_values(
+            item.get("entity_id", item.get("entity_ids"))
+        )
+        for entity_id in values:
+            self.edge(
+                entity_node(self.graph, entity_id),
+                node,
+                "used_in_condition",
+                location,
+                "dynamic" if dynamic else "confirmed",
+            )
+
+    def _nested_conditions(self, node, item, location):
+        created = []
+        for key in ("conditions", "condition"):
+            nested = item.get(key)
+            if isinstance(nested, (dict, list)) and nested is not item:
+                created.extend(self.condition(node, nested, f"{location}.{key}"))
+        return created
+
+    def _condition_reads(self, node, item, location):
+        for value in item.values():
+            refs, dynamic = self._entity_values(value)
+            for entity in refs:
+                self.edge(
+                    node,
+                    entity_node(self.graph, entity),
+                    "reads_state",
+                    location,
+                    "dynamic" if dynamic else "confirmed",
+                )
 
     def triggers(self, owner, config, location, relation="triggers"):
         for index, item in enumerate(config if isinstance(config, list) else [config]):
             if not isinstance(item, dict):
                 continue
-            metadata = {"trigger": item.get("trigger", "trigger")}
-            for key in ("to", "from", "event_type", "at", "above", "below"):
-                if key in item:
-                    metadata[key] = _safe_data(item[key])
+            item_location = f"{location}[{index}]"
+            metadata = self._trigger_metadata(item)
             values = item.get("entity_id", item.get("entity_ids"))
             refs, dynamic = self._entity_values(values)
             for entity_id in refs:
@@ -192,7 +211,7 @@ class FlowParser:
                     entity_node(self.graph, entity_id),
                     owner,
                     relation,
-                    f"{location}[{index}]",
+                    item_location,
                     "dynamic" if dynamic else "confirmed",
                     metadata,
                 )
@@ -204,19 +223,26 @@ class FlowParser:
                 owner,
                 target if isinstance(target, dict) else item,
                 "triggers",
-                f"{location}[{index}]",
+                item_location,
                 metadata,
             )
-            if item.get("trigger") == "event" and item.get("event_type"):
-                eid = f"event:{item['event_type']}"
-                self.graph.add_node(Node(eid, "event", item["event_type"]))
-                self.edge(
-                    eid,
-                    owner,
-                    "listens_event",
-                    f"{location}[{index}]",
-                    metadata=metadata,
-                )
+            self._event_trigger(owner, item, item_location, metadata)
+
+    @staticmethod
+    def _trigger_metadata(item):
+        metadata = {"trigger": item.get("trigger", "trigger")}
+        for key in ("to", "from", "event_type", "at", "above", "below"):
+            if key in item:
+                metadata[key] = _safe_data(item[key])
+        return metadata
+
+    def _event_trigger(self, owner, item, location, metadata):
+        if item.get("trigger") != "event" or not item.get("event_type"):
+            return
+        event = item["event_type"]
+        event_id = f"event:{event}"
+        self.graph.add_node(Node(event_id, "event", event))
+        self.edge(event_id, owner, "listens_event", location, metadata=metadata)
 
     def actions(self, owner, config, location="actions"):
         tails = [owner] if isinstance(owner, str) else list(owner)
@@ -228,98 +254,110 @@ class FlowParser:
             tails = self._action(tails, action, f"{location}[{index}]")
         return tails
 
-    def _action(self, parents, action, location):  # noqa: PLR0911
+    def _action(self, parents, action, location):
         if "delay" in action or "wait_template" in action:
-            return [
-                self._struct(parents, "delay", "Delay / wait", location, "next")
-            ]
-        if "wait_for_trigger" in action:
-            current = self._struct(
-                parents, "delay", "Wait for trigger", location, "next"
-            )
-            self.triggers(
-                current,
-                action["wait_for_trigger"],
-                location + ".wait_for_trigger",
-                "waits_for",
-            )
-            return [current]
-        if "condition" in action and not any(
+            handler, args = self._delay_action, (parents, location)
+        elif "wait_for_trigger" in action:
+            handler, args = self._wait_action, (parents, action, location)
+        elif "condition" in action and not any(
             key in action for key in ("if", "choose")
         ):
-            return self.condition(parents, action, location, "next")
-        if "if" in action:
-            branch = self._struct(parents, "branch", "If", location, "next")
-            conditions = self.condition(branch, action["if"], location + ".if")
-            condition_owner = conditions[-1] if conditions else branch
-            then_tails = self.actions(
-                condition_owner, action.get("then", []), location + ".then"
+            handler, args = self.condition, (parents, action, location, "next")
+        elif "if" in action:
+            handler, args = self._if_action, (parents, action, location)
+        elif "choose" in action:
+            handler, args = self._choose_action, (parents, action, location)
+        elif "sequence" in action:
+            handler, args = self._sequence_action, (parents, action, location)
+        elif "parallel" in action:
+            handler, args = self._parallel_action, (parents, action, location)
+        elif "repeat" in action:
+            handler, args = self._repeat_action, (parents, action, location)
+        else:
+            handler, args = self._service_action_step, (parents, action, location)
+        return handler(*args)
+
+    def _delay_action(self, parents, location):
+        return [self._struct(parents, "delay", "Delay / wait", location, "next")]
+
+    def _wait_action(self, parents, action, location):
+        current = self._struct(parents, "delay", "Wait for trigger", location, "next")
+        self.triggers(
+            current,
+            action["wait_for_trigger"],
+            location + ".wait_for_trigger",
+            "waits_for",
+        )
+        return [current]
+
+    def _if_action(self, parents, action, location):
+        branch = self._struct(parents, "branch", "If", location, "next")
+        conditions = self.condition(branch, action["if"], location + ".if")
+        condition_owner = conditions[-1] if conditions else branch
+        then_tails = self.actions(
+            condition_owner, action.get("then", []), location + ".then"
+        )
+        else_tails = self.actions(
+            condition_owner, action.get("else", []), location + ".else"
+        )
+        return self._unique(then_tails + (else_tails or [condition_owner]))
+
+    def _choose_action(self, parents, action, location):
+        branch = self._struct(parents, "branch", "Choose", location, "next")
+        tails = []
+        choices = action["choose"] if isinstance(action["choose"], list) else []
+        for choice_index, choice in enumerate(choices):
+            option_location = f"{location}.choose[{choice_index}]"
+            option = self._struct(
+                branch, "branch", f"Option {choice_index + 1}", option_location
             )
-            else_config = action.get("else", [])
-            else_tails = self.actions(condition_owner, else_config, location + ".else")
-            return self._unique(then_tails + (else_tails or [condition_owner]))
-        if "choose" in action:
-            branch = self._struct(parents, "branch", "Choose", location, "next")
-            tails = []
-            for choice_index, choice in enumerate(
-                action["choose"] if isinstance(action["choose"], list) else []
-            ):
-                option = self._struct(
-                    branch,
-                    "branch",
-                    f"Option {choice_index + 1}",
-                    f"{location}.choose[{choice_index}]",
-                )
-                conditions = self.condition(
-                    option,
-                    choice.get("conditions", []),
-                    f"{location}.choose[{choice_index}].conditions",
-                )
-                tails.extend(
-                    self.actions(
-                        conditions[-1] if conditions else option,
-                        choice.get("sequence", []),
-                        f"{location}.choose[{choice_index}].sequence",
-                    )
-                )
-            default_tails = self.actions(
-                branch, action.get("default", []), location + ".default"
-            )
-            return self._unique(tails + default_tails or [branch])
-        if "sequence" in action:
-            branch = self._struct(
-                parents, "branch", "Sequence", location + ".sequence", "next"
-            )
-            return self.actions(branch, action["sequence"], location + ".sequence")
-        if "parallel" in action:
-            branch = self._struct(
-                parents, "branch", "Parallel", location + ".parallel", "next"
-            )
-            tails = []
-            sequences = (
-                action["parallel"] if isinstance(action["parallel"], list) else []
-            )
-            for sequence_index, sequence in enumerate(sequences):
-                tails.extend(
-                    self.actions(
-                        branch, sequence, f"{location}.parallel[{sequence_index}]"
-                    )
-                )
-            return self._unique(tails or [branch])
-        if "repeat" in action:
-            branch = self._struct(parents, "branch", "Repeat", location, "next")
-            repeat = action["repeat"] if isinstance(action["repeat"], dict) else {}
             conditions = self.condition(
-                branch,
-                repeat.get("while", repeat.get("until", [])),
-                location + ".repeat",
+                option, choice.get("conditions", []), f"{option_location}.conditions"
             )
-            sequence_tails = self.actions(
-                conditions[-1] if conditions else branch,
-                repeat.get("sequence", []),
-                location + ".repeat.sequence",
+            tails.extend(
+                self.actions(
+                    conditions[-1] if conditions else option,
+                    choice.get("sequence", []),
+                    f"{option_location}.sequence",
+                )
             )
-            return self._unique([branch, *sequence_tails])
+        default_tails = self.actions(
+            branch, action.get("default", []), location + ".default"
+        )
+        return self._unique(tails + default_tails or [branch])
+
+    def _sequence_action(self, parents, action, location):
+        branch = self._struct(
+            parents, "branch", "Sequence", location + ".sequence", "next"
+        )
+        return self.actions(branch, action["sequence"], location + ".sequence")
+
+    def _parallel_action(self, parents, action, location):
+        branch = self._struct(
+            parents, "branch", "Parallel", location + ".parallel", "next"
+        )
+        tails = []
+        sequences = action["parallel"] if isinstance(action["parallel"], list) else []
+        for sequence_index, sequence in enumerate(sequences):
+            tails.extend(
+                self.actions(branch, sequence, f"{location}.parallel[{sequence_index}]")
+            )
+        return self._unique(tails or [branch])
+
+    def _repeat_action(self, parents, action, location):
+        branch = self._struct(parents, "branch", "Repeat", location, "next")
+        repeat = action["repeat"] if isinstance(action["repeat"], dict) else {}
+        conditions = self.condition(
+            branch, repeat.get("while", repeat.get("until", [])), location + ".repeat"
+        )
+        sequence_tails = self.actions(
+            conditions[-1] if conditions else branch,
+            repeat.get("sequence", []),
+            location + ".repeat.sequence",
+        )
+        return self._unique([branch, *sequence_tails])
+
+    def _service_action_step(self, parents, action, location):
         service = action.get("action", action.get("service"))
         label = service if isinstance(service, str) else "Action"
         metadata = {

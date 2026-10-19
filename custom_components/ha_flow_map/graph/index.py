@@ -77,18 +77,16 @@ class GraphIndex:
             current, level = queue.popleft()
             if level >= depth:
                 continue
-            candidates = ([] if direction == "outbound" else self.inbound[current]) + (
-                [] if direction == "inbound" else self.outbound[current]
+            self._visit_neighborhood(
+                current,
+                level,
+                direction,
+                max_nodes,
+                max_edges,
+                seen,
+                selected,
+                queue,
             )
-            for edge in candidates:
-                if len(selected) >= max_edges:
-                    break
-                if edge not in selected:
-                    selected.append(edge)
-                other = edge.source if edge.target == current else edge.target
-                if other not in seen and len(seen) < max_nodes:
-                    seen.add(other)
-                    queue.append((other, level + 1))
         truncated = bool(queue)
         return {
             "nodes": [
@@ -100,6 +98,30 @@ class GraphIndex:
             "warnings": self.graph.warnings,
             "truncated": truncated,
         }
+
+    def _visit_neighborhood(
+        self,
+        current,
+        level,
+        direction,
+        max_nodes,
+        max_edges,
+        seen,
+        selected,
+        queue,
+    ):
+        candidates = ([] if direction == "outbound" else self.inbound[current]) + (
+            [] if direction == "inbound" else self.outbound[current]
+        )
+        for edge in candidates:
+            if len(selected) >= max_edges:
+                return
+            if edge not in selected:
+                selected.append(edge)
+            other = edge.source if edge.target == current else edge.target
+            if other not in seen and len(seen) < max_nodes:
+                seen.add(other)
+                queue.append((other, level + 1))
 
     def focused_flow(self, node_id, max_nodes=250, max_edges=500):
         """Return the selected owner's complete direct output flow.
@@ -118,65 +140,37 @@ class GraphIndex:
         visited = {(node_id, None, None, None)}
         truncated = False
 
-        for edge in self.inbound[node_id]:
-            if edge.type not in {"triggers", "listens_event"}:
-                continue
-            trigger = edge.source
-            if trigger not in seen and len(seen) >= max_nodes:
-                truncated = True
-                break
-            if len(selected) >= max_edges:
-                truncated = True
-                break
-            seen.add(trigger)
-            selected.append(edge)
-            selected_ids.add(edge.id)
+        truncated = self._add_focused_triggers(
+            node_id, max_nodes, max_edges, seen, selected, selected_ids
+        )
 
         while queue and not truncated:
             current, service_location, source_kind, flow_owner = queue.popleft()
             node = self.graph.nodes.get(current)
             if not node:
                 continue
-            candidates = self.outbound[current]
-            if node.type == "service":
-                candidates = [
-                    edge
-                    for edge in candidates
-                    if edge.location == service_location
-                    and edge.source_kind == source_kind
-                    and edge.metadata.get("flow_owner") == flow_owner
-                ]
+            candidates = self._focused_candidates(
+                current, node, service_location, source_kind, flow_owner
+            )
             for edge in candidates:
                 if edge.type in FLOW_INPUT_RELATIONS:
                     continue
-                target = edge.target
-                if target not in seen and len(seen) >= max_nodes:
-                    truncated = True
-                    continue
-                if edge.id not in selected_ids:
-                    if len(selected) >= max_edges:
-                        truncated = True
-                        break
-                    selected.append(edge)
-                    selected_ids.add(edge.id)
-                if target not in seen:
-                    seen.add(target)
-                target_node = self.graph.nodes.get(target)
-                if (
-                    target_node
-                    and target_node.type in FLOW_OWNER_TYPES
-                    and target != node_id
-                ):
-                    continue
-                context = (
-                    (edge.location, edge.source_kind, edge.metadata.get("flow_owner"))
-                    if target_node and target_node.type == "service"
-                    else (None, None, None)
+                truncated = (
+                    self._collect_focused_edge(
+                        edge,
+                        node_id,
+                        max_nodes,
+                        max_edges,
+                        seen,
+                        selected,
+                        selected_ids,
+                        visited,
+                        queue,
+                    )
+                    or truncated
                 )
-                state = (target, *context)
-                if state not in visited:
-                    visited.add(state)
-                    queue.append(state)
+                if truncated and len(selected) >= max_edges:
+                    break
             if truncated:
                 break
 
@@ -191,6 +185,71 @@ class GraphIndex:
             "truncated": truncated,
             "mode": "focused_flow",
         }
+
+    def _add_focused_triggers(
+        self, node_id, max_nodes, max_edges, seen, selected, selected_ids
+    ):
+        for edge in self.inbound[node_id]:
+            if edge.type not in {"triggers", "listens_event"}:
+                continue
+            if edge.source not in seen and len(seen) >= max_nodes:
+                return True
+            if len(selected) >= max_edges:
+                return True
+            seen.add(edge.source)
+            selected.append(edge)
+            selected_ids.add(edge.id)
+        return False
+
+    def _focused_candidates(
+        self, current, node, service_location, source_kind, flow_owner
+    ):
+        if node.type != "service":
+            return self.outbound[current]
+        return [
+            edge
+            for edge in self.outbound[current]
+            if edge.location == service_location
+            and edge.source_kind == source_kind
+            and edge.metadata.get("flow_owner") == flow_owner
+        ]
+
+    def _collect_focused_edge(
+        self,
+        edge,
+        node_id,
+        max_nodes,
+        max_edges,
+        seen,
+        selected,
+        selected_ids,
+        visited,
+        queue,
+    ):
+        target = edge.target
+        if target not in seen and len(seen) >= max_nodes:
+            return True
+        if edge.id not in selected_ids:
+            if len(selected) >= max_edges:
+                return True
+            selected.append(edge)
+            selected_ids.add(edge.id)
+        seen.add(target)
+        target_node = self.graph.nodes.get(target)
+        if target_node and target_node.type in FLOW_OWNER_TYPES and target != node_id:
+            return False
+        context = self._service_context(edge, target_node)
+        state = (target, *context)
+        if state not in visited:
+            visited.add(state)
+            queue.append(state)
+        return False
+
+    @staticmethod
+    def _service_context(edge, target_node):
+        if target_node and target_node.type == "service":
+            return edge.location, edge.source_kind, edge.metadata.get("flow_owner")
+        return None, None, None
 
     def impact(self, node_id, max_depth=12, max_nodes=1000):
         """Summarise the configuration owners reachable from a node.

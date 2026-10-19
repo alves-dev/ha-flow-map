@@ -32,6 +32,9 @@
   improves loading, empty, error, and disabled-control states for the panel.
 - The panel now restores its index summary after a relationship or focused-flow
   load completes.
+- Sonar remediation refactored graph, parser, and WebSocket branching without
+  changing the public graph contract; regression coverage now includes limits,
+  template references, and unconfigured commands.
 
 ## [Current State] - Context Mesh Added
 

@@ -10,6 +10,8 @@ All user-relevant changes are documented in this file.
 - Improved panel loading, empty, and error states, including accessible labels
   and disabled controls during rebuilds and data loads.
 - Restored the index summary after relationship and focused-flow loads finish.
+- Improved the reliability of bounded graph exploration and WebSocket responses
+  when limits or configuration availability change.
 - Completed the light and dark branding asset set required by Home Assistant
   and HACS, including matching high-density variants.
 
