@@ -259,9 +259,7 @@ class FlowParser:
             handler, args = self._delay_action, (parents, location)
         elif "wait_for_trigger" in action:
             handler, args = self._wait_action, (parents, action, location)
-        elif "condition" in action and not any(
-            key in action for key in ("if", "choose")
-        ):
+        elif self._is_plain_condition(action):
             handler, args = self.condition, (parents, action, location, "next")
         elif "if" in action:
             handler, args = self._if_action, (parents, action, location)
@@ -276,6 +274,10 @@ class FlowParser:
         else:
             handler, args = self._service_action_step, (parents, action, location)
         return handler(*args)
+
+    @staticmethod
+    def _is_plain_condition(action):
+        return "condition" in action and not {"if", "choose"}.intersection(action)
 
     def _delay_action(self, parents, location):
         return [self._struct(parents, "delay", "Delay / wait", location, "next")]
