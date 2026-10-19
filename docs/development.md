@@ -23,9 +23,10 @@ for experimental changes.
 uv run ruff check custom_components tests
 uv run pytest --cov=custom_components/ha_flow_map --cov-report=xml --cov-report=term
 node tests/test_frontend.mjs
-python3 /home/alves-dev/projects/others/infra/skills/home-assistant-integration-standards/scripts/validate_integration_structure.py .
 ```
 
 Before a release, also run the HACS and Hassfest workflows. Keep the manifest,
 changelog, compatibility matrix and project version aligned when changing the
-integration version.
+integration version. The HACS catalog check requires network access; an
+indeterminate result should be retried before release rather than treated as
+proof that the integration is in or out of the default catalog.

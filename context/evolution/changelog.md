@@ -24,6 +24,12 @@
 
 - Flow Map now derives its panel, graph, and exported SVG/PNG colors from the
   active Home Assistant theme instead of using a fixed dark palette.
+- The integration now ships the complete Home Assistant light/dark branding
+  asset set with validated 1x and 2x dimensions. The structure validator
+  passes; the official HACS catalog check was indeterminate because DNS was
+  unavailable in the validation environment.
+- Release `2026.10.1` requires administrator access at panel registration and
+  improves loading, empty, error, and disabled-control states for the panel.
 
 ## [Current State] - Context Mesh Added
 

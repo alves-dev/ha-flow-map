@@ -34,3 +34,4 @@ class PanelTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(hass.http.paths), 1)
         register.assert_awaited_once()
         self.assertIn("ha-flow-map.js?v=", register.await_args.kwargs["module_url"])
+        self.assertTrue(register.await_args.kwargs["require_admin"])

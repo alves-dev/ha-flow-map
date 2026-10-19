@@ -26,5 +26,5 @@ async def async_register_panel(hass):
         sidebar_icon="mdi:graph-outline",
         module_url=f"/ha_flow_map/ha-flow-map.js?v={path.stat().st_mtime_ns}",
         embed_iframe=False,
-        require_admin=False,
+        require_admin=True,
     )

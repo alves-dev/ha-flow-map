@@ -18,7 +18,10 @@ Alternatives are not documented in the existing codebase. Possible alternatives 
 
 ## Outcomes
 
-Outcomes to be documented as the project evolves.
+The sidebar registration now requires Home Assistant administrator access in
+addition to administrator checks on administrative WebSocket operations.
+Panel loading and failure states remain in the frontend, while authorization
+is enforced by the host panel registration rather than by hiding controls.
 
 ## Related
 

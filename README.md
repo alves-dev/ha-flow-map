@@ -1,9 +1,10 @@
 # HA Flow Map
 
-![Version](https://img.shields.io/badge/Version-2026.8.0-41BDF5?style=flat-square)
+![Version](https://img.shields.io/badge/Version-2026.10.1-41BDF5?style=flat-square)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.6%2B-41BDF5?logo=homeassistant)
 [![Quality Gate](https://sonar.alves-dev.com/api/project_badges/measure?project=ha-flow-map&metric=alert_status)](https://sonar.alves-dev.com/dashboard?id=ha-flow-map)
 [![Coverage](https://sonar.alves-dev.com/api/project_badges/measure?project=ha-flow-map&metric=coverage)](https://sonar.alves-dev.com/dashboard?id=ha-flow-map)
+
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=alves-dev&repository=ha-flow-map&category=integration)
 
 Read-only Home Assistant custom integration that indexes explicit relationships in
