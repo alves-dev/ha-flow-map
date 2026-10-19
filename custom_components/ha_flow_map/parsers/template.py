@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-ENTITY_RE = re.compile(r"\b[a-z_][a-z0-9_]*\.[a-zA-Z0-9_]+\b")
+ENTITY_RE = re.compile(r"\b[a-z_][a-z0-9_]*\.\w+\b")
 
 
 def references(value):

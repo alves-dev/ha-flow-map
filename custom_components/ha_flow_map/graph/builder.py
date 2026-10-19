@@ -12,26 +12,39 @@ def _name(config, fallback):
 
 def build_graph(automations, scripts, scenes, states=()):
     graph = Graph()
+    states_by_entity = {}
     for state in states:
         entity_id = getattr(state, "entity_id", None)
         if entity_id:
-            label = state.attributes.get("friendly_name", entity_id)
+            states_by_entity[entity_id] = state
+            attributes = getattr(state, "attributes", {}) or {}
+            label = attributes.get("friendly_name", entity_id)
             graph.add_node(
                 Node(
                     f"entity:{entity_id}",
                     "entity",
                     label,
-                    {"domain": entity_id.split(".", 1)[0], "state": state.state},
+                    {
+                        "domain": entity_id.split(".", 1)[0],
+                        "state": state.state,
+                        "available": state.state not in {"unknown", "unavailable"},
+                    },
                 )
             )
     for entity_id, config in automations.items():
         node_id = f"automation:{entity_id.split('.', 1)[-1]}"
+        runtime_state = states_by_entity.get(entity_id)
+        state_value = getattr(runtime_state, "state", None)
         graph.add_node(
             Node(
                 node_id,
                 "automation",
                 _name(config, entity_id),
-                {"entity_id": entity_id},
+                {
+                    "entity_id": entity_id,
+                    "state": state_value,
+                    "available": state_value not in {None, "unknown", "unavailable"},
+                },
             )
         )
         FlowParser(graph, "automation_config").parse_flow(node_id, config)

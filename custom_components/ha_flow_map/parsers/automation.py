@@ -54,11 +54,18 @@ class FlowParser:
             )
         )
 
-    def _struct(self, parent, kind, label, location):
+    def _struct(
+        self, parent, kind, label, location, relation="contains", metadata=None
+    ):
+        parents = [parent] if isinstance(parent, str) else list(parent)
         self._sequence += 1
-        node_id = f"{parent}:{kind}:{self._sequence}"
-        self.graph.add_node(Node(node_id, kind, label, {"location": location}))
-        self.edge(parent, node_id, "contains", location)
+        node_owner = parents[0] if len(parents) == 1 else self._flow_owner
+        node_id = f"{node_owner}:{kind}:{self._sequence}"
+        self.graph.add_node(
+            Node(node_id, kind, label, {"location": location, **(metadata or {})})
+        )
+        for item in parents:
+            self.edge(item, node_id, relation, location)
         return node_id
 
     def _entity_values(self, value):
@@ -75,11 +82,15 @@ class FlowParser:
             return refs, dynamic
         return [], False
 
-    def target(self, owner, target, relation, location):
+    def target(self, owner, target, relation, location, metadata=None):
         if not isinstance(target, dict):
             return
         values = target.get("entity_id", target.get("entity_ids"))
         refs, dynamic = self._entity_values(values)
+        self._entity_targets(owner, refs, relation, location, dynamic, metadata)
+        self._selector_targets(owner, target, relation, location, metadata)
+
+    def _entity_targets(self, owner, refs, relation, location, dynamic, metadata):
         for entity_id in refs:
             target_id = entity_node(self.graph, entity_id)
             self.edge(
@@ -88,76 +99,115 @@ class FlowParser:
                 relation,
                 location,
                 "dynamic" if dynamic else "confirmed",
+                metadata,
             )
+
+    def _selector_targets(self, owner, target, relation, location, metadata):
         for field, kind in (("device_id", "device"), ("area_id", "area")):
             values = target.get(field)
             if not values:
                 continue
-            for value in values if isinstance(values, list) else [values]:
-                node_id = f"{kind}:{value}"
-                self.graph.add_node(Node(node_id, kind, str(value)))
-                self.edge(
-                    node_id if relation == "triggers" else owner,
-                    owner if relation == "triggers" else node_id,
-                    # A device/area can be the source of a trigger just as an
-                    # entity can.  Preserve that relationship so the graph and
-                    # UI do not mistake it for an action target.
-                    relation if relation in {"targets", "triggers"} else "targets",
-                    location,
+            for value in self._selector_values(values):
+                self._add_selector_target(
+                    owner, kind, value, relation, location, metadata
                 )
 
-    def condition(self, owner, config, location):
+    @staticmethod
+    def _selector_values(values):
+        return values if isinstance(values, list) else [values]
+
+    def _add_selector_target(self, owner, kind, value, relation, location, metadata):
+        node_id = f"{kind}:{value}"
+        self.graph.add_node(Node(node_id, kind, str(value)))
+        source = node_id if relation == "triggers" else owner
+        target = owner if relation == "triggers" else node_id
+        edge_type = relation if relation in {"targets", "triggers"} else "targets"
+        # A device/area can be the source of a trigger just as an entity can.
+        self.edge(source, target, edge_type, location, metadata=metadata)
+
+    def condition(self, owner, config, location, relation="contains"):
         created = []
         items = config if isinstance(config, list) else [config]
         for index, item in enumerate(items):
             if not isinstance(item, dict):
                 continue
+            item_location = f"{location}[{index}]"
+            metadata = self._condition_metadata(item)
             node = self._struct(
                 owner,
                 "condition",
-                item.get("condition", "condition"),
-                f"{location}[{index}]",
+                metadata["condition"],
+                item_location,
+                relation,
+                metadata,
             )
             created.append(node)
-            values, dynamic = self._entity_values(
-                item.get("entity_id", item.get("entity_ids"))
-            )
-            for entity_id in values:
-                self.edge(
-                    entity_node(self.graph, entity_id),
-                    node,
-                    "used_in_condition",
-                    f"{location}[{index}]",
-                    "dynamic" if dynamic else "confirmed",
-                )
+            self._condition_entities(node, item, item_location)
             self.target(
                 node,
                 {key: item[key] for key in ("device_id", "area_id") if key in item},
                 "used_in_condition",
-                f"{location}[{index}]",
+                item_location,
             )
-            for key in ("conditions", "condition"):
-                nested = item.get(key)
-                if isinstance(nested, (dict, list)) and nested is not item:
-                    created.extend(
-                        self.condition(node, nested, f"{location}[{index}].{key}")
-                    )
-            for value in item.values():
-                refs, dynamic = self._entity_values(value)
-                for entity in refs:
-                    self.edge(
-                        node,
-                        entity_node(self.graph, entity),
-                        "reads_state",
-                        location,
-                        "dynamic" if dynamic else "confirmed",
-                    )
+            created.extend(self._nested_conditions(node, item, item_location))
+            self._condition_reads(node, item, location)
         return created
+
+    @staticmethod
+    def _condition_metadata(item):
+        metadata = {"condition": item.get("condition", "condition")}
+        for key in (
+            "entity_id",
+            "entity_ids",
+            "state",
+            "above",
+            "below",
+            "after",
+            "before",
+        ):
+            if key in item:
+                metadata[key] = _safe_data(item[key])
+        return metadata
+
+    def _condition_entities(self, node, item, location):
+        values, dynamic = self._entity_values(
+            item.get("entity_id", item.get("entity_ids"))
+        )
+        for entity_id in values:
+            self.edge(
+                entity_node(self.graph, entity_id),
+                node,
+                "used_in_condition",
+                location,
+                "dynamic" if dynamic else "confirmed",
+            )
+
+    def _nested_conditions(self, node, item, location):
+        created = []
+        for key in ("conditions", "condition"):
+            nested = item.get(key)
+            if isinstance(nested, (dict, list)) and nested is not item:
+                created.extend(self.condition(node, nested, f"{location}.{key}"))
+        return created
+
+    def _condition_reads(self, node, item, location):
+        for value in item.values():
+            refs, dynamic = self._entity_values(value)
+            for entity in refs:
+                self.edge(
+                    node,
+                    entity_node(self.graph, entity),
+                    "reads_state",
+                    location,
+                    "dynamic" if dynamic else "confirmed",
+                )
 
     def triggers(self, owner, config, location, relation="triggers"):
         for index, item in enumerate(config if isinstance(config, list) else [config]):
             if not isinstance(item, dict):
                 continue
+            item_location = f"{location}[{index}]"
+            metadata = self._trigger_metadata(item)
             values = item.get("entity_id", item.get("entity_ids"))
             refs, dynamic = self._entity_values(values)
             for entity_id in refs:
@@ -165,8 +215,9 @@ class FlowParser:
                     entity_node(self.graph, entity_id),
                     owner,
                     relation,
-                    f"{location}[{index}]",
+                    item_location,
                     "dynamic" if dynamic else "confirmed",
+                    metadata,
                 )
             # Device and area triggers have no entity reference but remain discoverable.
             # Device-trigger automations place their selector under ``target``;
@@ -176,153 +227,228 @@ class FlowParser:
                 owner,
                 target if isinstance(target, dict) else item,
                 "triggers",
-                f"{location}[{index}]",
+                item_location,
+                metadata,
             )
-            if item.get("trigger") == "event" and item.get("event_type"):
-                eid = f"event:{item['event_type']}"
-                self.graph.add_node(Node(eid, "event", item["event_type"]))
-                self.edge(eid, owner, "listens_event", f"{location}[{index}]")
+            self._event_trigger(owner, item, item_location, metadata)
+
+    @staticmethod
+    def _trigger_metadata(item):
+        metadata = {"trigger": item.get("trigger", "trigger")}
+        for key in ("to", "from", "event_type", "at", "above", "below"):
+            if key in item:
+                metadata[key] = _safe_data(item[key])
+        return metadata
+
+    def _event_trigger(self, owner, item, location, metadata):
+        if item.get("trigger") != "event" or not item.get("event_type"):
+            return
+        event = item["event_type"]
+        event_id = f"event:{event}"
+        self.graph.add_node(Node(event_id, "event", event))
+        self.edge(event_id, owner, "listens_event", location, metadata=metadata)
 
     def actions(self, owner, config, location="actions"):
+        tails = [owner] if isinstance(owner, str) else list(owner)
         for index, action in enumerate(
             config if isinstance(config, list) else [config]
         ):
             if not isinstance(action, dict):
                 continue
-            loc = f"{location}[{index}]"
-            current = owner
-            if "delay" in action or "wait_template" in action:
-                current = self._struct(owner, "delay", "Delay / wait", loc)
-            if "wait_for_trigger" in action:
-                current = self._struct(owner, "delay", "Wait for trigger", loc)
-                self.triggers(
-                    current,
-                    action["wait_for_trigger"],
-                    loc + ".wait_for_trigger",
-                    "waits_for",
-                )
-            if "condition" in action and not any(
-                key in action for key in ("if", "choose")
-            ):
-                self.condition(owner, action, loc)
-                continue
-            if "if" in action:
-                branch = self._struct(owner, "branch", "If", loc)
-                conditions = self.condition(branch, action["if"], loc + ".if")
-                condition_owner = conditions[-1] if conditions else branch
-                self.actions(condition_owner, action.get("then", []), loc + ".then")
-                self.actions(condition_owner, action.get("else", []), loc + ".else")
-            if "choose" in action:
-                branch = self._struct(owner, "branch", "Choose", loc)
-                for choice_index, choice in enumerate(
-                    action["choose"] if isinstance(action["choose"], list) else []
-                ):
-                    option = self._struct(
-                        branch,
-                        "branch",
-                        f"Option {choice_index + 1}",
-                        f"{loc}.choose[{choice_index}]",
-                    )
-                    conditions = self.condition(
-                        option,
-                        choice.get("conditions", []),
-                        f"{loc}.choose[{choice_index}].conditions",
-                    )
-                    self.actions(
-                        conditions[-1] if conditions else option,
-                        choice.get("sequence", []),
-                        f"{loc}.choose[{choice_index}].sequence",
-                    )
-                self.actions(branch, action.get("default", []), loc + ".default")
-            for key, label in (("sequence", "Sequence"), ("parallel", "Parallel")):
-                if key in action:
-                    branch = self._struct(owner, "branch", label, loc + "." + key)
-                    sequences = action[key] if key == "parallel" else [action[key]]
-                    for sequence in sequences:
-                        self.actions(branch, sequence, loc + "." + key)
-            if "repeat" in action:
-                branch = self._struct(owner, "branch", "Repeat", loc)
-                repeat = action["repeat"] if isinstance(action["repeat"], dict) else {}
-                conditions = self.condition(
-                    branch,
-                    repeat.get("while", repeat.get("until", [])),
-                    loc + ".repeat",
-                )
+            tails = self._action(tails, action, f"{location}[{index}]")
+        return tails
+
+    def _action(self, parents, action, location):
+        if "delay" in action or "wait_template" in action:
+            handler, args = self._delay_action, (parents, location)
+        elif "wait_for_trigger" in action:
+            handler, args = self._wait_action, (parents, action, location)
+        elif self._is_plain_condition(action):
+            handler, args = self.condition, (parents, action, location, "next")
+        elif "if" in action:
+            handler, args = self._if_action, (parents, action, location)
+        elif "choose" in action:
+            handler, args = self._choose_action, (parents, action, location)
+        elif "sequence" in action:
+            handler, args = self._sequence_action, (parents, action, location)
+        elif "parallel" in action:
+            handler, args = self._parallel_action, (parents, action, location)
+        elif "repeat" in action:
+            handler, args = self._repeat_action, (parents, action, location)
+        else:
+            handler, args = self._service_action_step, (parents, action, location)
+        return handler(*args)
+
+    @staticmethod
+    def _is_plain_condition(action):
+        return "condition" in action and not {"if", "choose"}.intersection(action)
+
+    def _delay_action(self, parents, location):
+        return [self._struct(parents, "delay", "Delay / wait", location, "next")]
+
+    def _wait_action(self, parents, action, location):
+        current = self._struct(parents, "delay", "Wait for trigger", location, "next")
+        self.triggers(
+            current,
+            action["wait_for_trigger"],
+            location + ".wait_for_trigger",
+            "waits_for",
+        )
+        return [current]
+
+    def _if_action(self, parents, action, location):
+        branch = self._struct(parents, "branch", "If", location, "next")
+        conditions = self.condition(branch, action["if"], location + ".if")
+        condition_owner = conditions[-1] if conditions else branch
+        then_tails = self.actions(
+            condition_owner, action.get("then", []), location + ".then"
+        )
+        else_tails = self.actions(
+            condition_owner, action.get("else", []), location + ".else"
+        )
+        return self._unique(then_tails + (else_tails or [condition_owner]))
+
+    def _choose_action(self, parents, action, location):
+        branch = self._struct(parents, "branch", "Choose", location, "next")
+        tails = []
+        choices = action["choose"] if isinstance(action["choose"], list) else []
+        for choice_index, choice in enumerate(choices):
+            option_location = f"{location}.choose[{choice_index}]"
+            option = self._struct(
+                branch, "branch", f"Option {choice_index + 1}", option_location
+            )
+            conditions = self.condition(
+                option, choice.get("conditions", []), f"{option_location}.conditions"
+            )
+            tails.extend(
                 self.actions(
-                    conditions[-1] if conditions else branch,
-                    repeat.get("sequence", []),
-                    loc + ".repeat.sequence",
-                )
-            service = action.get("action", action.get("service"))
-            if not isinstance(service, str):
-                continue
-            service_id = f"service:{service}"
-            self.graph.add_node(
-                Node(
-                    service_id,
-                    "service",
-                    service,
-                    {"domain": service.split(".", 1)[0] if "." in service else service},
+                    conditions[-1] if conditions else option,
+                    choice.get("sequence", []),
+                    f"{option_location}.sequence",
                 )
             )
-            self.edge(
-                current,
+        default_tails = self.actions(
+            branch, action.get("default", []), location + ".default"
+        )
+        return self._unique(tails + default_tails or [branch])
+
+    def _sequence_action(self, parents, action, location):
+        branch = self._struct(
+            parents, "branch", "Sequence", location + ".sequence", "next"
+        )
+        return self.actions(branch, action["sequence"], location + ".sequence")
+
+    def _parallel_action(self, parents, action, location):
+        branch = self._struct(
+            parents, "branch", "Parallel", location + ".parallel", "next"
+        )
+        tails = []
+        sequences = action["parallel"] if isinstance(action["parallel"], list) else []
+        for sequence_index, sequence in enumerate(sequences):
+            tails.extend(
+                self.actions(branch, sequence, f"{location}.parallel[{sequence_index}]")
+            )
+        return self._unique(tails or [branch])
+
+    def _repeat_action(self, parents, action, location):
+        branch = self._struct(parents, "branch", "Repeat", location, "next")
+        repeat = action["repeat"] if isinstance(action["repeat"], dict) else {}
+        conditions = self.condition(
+            branch, repeat.get("while", repeat.get("until", [])), location + ".repeat"
+        )
+        sequence_tails = self.actions(
+            conditions[-1] if conditions else branch,
+            repeat.get("sequence", []),
+            location + ".repeat.sequence",
+        )
+        return self._unique([branch, *sequence_tails])
+
+    def _service_action_step(self, parents, action, location):
+        service = action.get("action", action.get("service"))
+        label = service if isinstance(service, str) else "Action"
+        metadata = {
+            "service": service,
+            "data": _safe_data(action.get("data", action.get("service_data", {}))),
+            "target": _safe_data(action.get("target", action.get("data", {}))),
+        }
+        current = self._struct(parents, "action", label, location, "next", metadata)
+        if not isinstance(service, str):
+            return [current]
+        self._service_action(current, service, action, location)
+        return [current]
+
+    def _service_action(self, current, service, action, location):
+        service_id = f"service:{service}"
+        self.graph.add_node(
+            Node(
                 service_id,
-                "calls_service",
-                loc,
-                metadata={
-                    "service": service,
-                    "data": _safe_data(
-                        action.get("data", action.get("service_data", {}))
-                    ),
-                },
+                "service",
+                service,
+                {"domain": service.split(".", 1)[0] if "." in service else service},
             )
-            self.target(
-                service_id, action.get("target", action.get("data", {})), "targets", loc
+        )
+        self.edge(
+            current,
+            service_id,
+            "calls_service",
+            location,
+            metadata={
+                "service": service,
+                "data": _safe_data(action.get("data", action.get("service_data", {}))),
+                "flow_owner": self._flow_owner,
+            },
+        )
+        self.target(
+            service_id,
+            action.get("target", action.get("data", {})),
+            "targets",
+            location,
+            {"flow_owner": self._flow_owner},
+        )
+        domain, _, object_id = service.partition(".")
+        if domain in {"script", "automation", "scene"} and object_id not in {
+            "turn_on",
+            "turn_off",
+            "toggle",
+            "reload",
+        }:
+            target_id = f"{domain}:{object_id}"
+            self.graph.add_node(Node(target_id, domain, object_id))
+            relation = {
+                "script": "calls_script",
+                "automation": "calls_automation",
+                "scene": "activates_scene",
+            }[domain]
+            self.edge(current, target_id, relation, location)
+        target_config = action.get("target", action.get("data", {}))
+        if isinstance(target_config, dict):
+            target_refs, _ = self._entity_values(
+                target_config.get("entity_id", target_config.get("entity_ids"))
             )
-            domain, _, object_id = service.partition(".")
-            if domain in {"script", "automation", "scene"} and object_id not in {
-                "turn_on",
-                "turn_off",
-                "toggle",
-                "reload",
-            }:
-                target_id = f"{domain}:{object_id}"
-                self.graph.add_node(Node(target_id, domain, object_id))
-                relation = {
-                    "script": "calls_script",
-                    "automation": "calls_automation",
-                    "scene": "activates_scene",
-                }[domain]
-                self.edge(current, target_id, relation, loc)
-            # script.turn_on / scene.turn_on refer to their target rather than the
-            # service name. Preserve both the service call and its semantic target.
-            target_config = action.get("target", action.get("data", {}))
-            if isinstance(target_config, dict):
-                target_refs, _ = self._entity_values(
-                    target_config.get("entity_id", target_config.get("entity_ids"))
-                )
-                for target_ref in target_refs:
-                    target_domain, _, target_object = target_ref.partition(".")
-                    if target_domain in {"script", "automation", "scene"}:
-                        target_id = f"{target_domain}:{target_object}"
-                        self.graph.add_node(
-                            Node(target_id, target_domain, target_object)
-                        )
-                        relation = {
-                            "script": "calls_script",
-                            "automation": "calls_automation",
-                            "scene": "activates_scene",
-                        }[target_domain]
-                        self.edge(current, target_id, relation, loc)
-            if service == "event.fire":
-                event = action.get("data", {}).get("event_type")
-                if isinstance(event, str):
-                    eid = f"event:{event}"
-                    self.graph.add_node(Node(eid, "event", event))
-                    self.edge(current, eid, "fires_event", loc)
+            for target_ref in target_refs:
+                target_domain, _, target_object = target_ref.partition(".")
+                if target_domain in {"script", "automation", "scene"}:
+                    target_id = f"{target_domain}:{target_object}"
+                    self.graph.add_node(Node(target_id, target_domain, target_object))
+                    relation = {
+                        "script": "calls_script",
+                        "automation": "calls_automation",
+                        "scene": "activates_scene",
+                    }[target_domain]
+                    self.edge(current, target_id, relation, location)
+        if service == "event.fire":
+            event = action.get("data", {}).get("event_type")
+            if isinstance(event, str):
+                eid = f"event:{event}"
+                self.graph.add_node(Node(eid, "event", event))
+                self.edge(current, eid, "fires_event", location)
+
+    @staticmethod
+    def _unique(items):
+        return list(dict.fromkeys(items))
 
     def parse_flow(self, node_id, config):
+        self._flow_owner = node_id
         self.triggers(
             node_id, config.get("triggers", config.get("trigger", [])), "triggers"
         )
@@ -360,4 +486,4 @@ def _safe_data(value: Any):
             return [sanitize(nested) for nested in item]
         return item
 
-    return sanitize(value) if isinstance(value, dict) else {}
+    return sanitize(value)

@@ -80,8 +80,29 @@ class WebsocketApiTests(unittest.IsolatedAsyncioTestCase):
             self.connection.errors, [(1, "not_found", "Flow Map node not found")]
         )
 
+    async def test_flow_returns_focused_flow(self):
+        await self.call("ha_flow_map/flow", {"id": 1, "node_id": "automation:office"})
+
+        self.assertEqual(self.connection.results[0][1]["mode"], "focused_flow")
+
     async def test_rebuild_returns_updated_status(self):
         await self.call("ha_flow_map/rebuild", {"id": 1})
 
         self.coordinator.async_rebuild.assert_awaited_once()
         self.assertEqual(self.connection.results[0][1]["status"], "complete")
+
+    async def test_commands_report_not_configured_without_coordinator(self):
+        self.hass.data[DOMAIN] = {}
+
+        await self.call("ha_flow_map/status", {"id": 1})
+        await self.call("ha_flow_map/impact", {"id": 2, "node_id": "missing"})
+        await self.call("ha_flow_map/rebuild", {"id": 3})
+
+        self.assertEqual(self.connection.results[0][1], {"status": "not_configured"})
+        self.assertEqual(
+            self.connection.errors,
+            [
+                (2, "not_found", "Flow Map node not found"),
+                (3, "not_configured", "Configure HA Flow Map first"),
+            ],
+        )
