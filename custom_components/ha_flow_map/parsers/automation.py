@@ -107,19 +107,23 @@ class FlowParser:
             values = target.get(field)
             if not values:
                 continue
-            for value in values if isinstance(values, list) else [values]:
-                node_id = f"{kind}:{value}"
-                self.graph.add_node(Node(node_id, kind, str(value)))
-                self.edge(
-                    node_id if relation == "triggers" else owner,
-                    owner if relation == "triggers" else node_id,
-                    # A device/area can be the source of a trigger just as an
-                    # entity can.  Preserve that relationship so the graph and
-                    # UI do not mistake it for an action target.
-                    relation if relation in {"targets", "triggers"} else "targets",
-                    location,
-                    metadata=metadata,
+            for value in self._selector_values(values):
+                self._add_selector_target(
+                    owner, kind, value, relation, location, metadata
                 )
+
+    @staticmethod
+    def _selector_values(values):
+        return values if isinstance(values, list) else [values]
+
+    def _add_selector_target(self, owner, kind, value, relation, location, metadata):
+        node_id = f"{kind}:{value}"
+        self.graph.add_node(Node(node_id, kind, str(value)))
+        source = node_id if relation == "triggers" else owner
+        target = owner if relation == "triggers" else node_id
+        edge_type = relation if relation in {"targets", "triggers"} else "targets"
+        # A device/area can be the source of a trigger just as an entity can.
+        self.edge(source, target, edge_type, location, metadata=metadata)
 
     def condition(self, owner, config, location, relation="contains"):
         created = []

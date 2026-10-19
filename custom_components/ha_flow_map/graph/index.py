@@ -152,25 +152,20 @@ class GraphIndex:
             candidates = self._focused_candidates(
                 current, node, service_location, source_kind, flow_owner
             )
-            for edge in candidates:
-                if edge.type in FLOW_INPUT_RELATIONS:
-                    continue
-                truncated = (
-                    self._collect_focused_edge(
-                        edge,
-                        node_id,
-                        max_nodes,
-                        max_edges,
-                        seen,
-                        selected,
-                        selected_ids,
-                        visited,
-                        queue,
-                    )
-                    or truncated
+            truncated = (
+                self._visit_focused_edges(
+                    candidates,
+                    node_id,
+                    max_nodes,
+                    max_edges,
+                    seen,
+                    selected,
+                    selected_ids,
+                    visited,
+                    queue,
                 )
-                if truncated and len(selected) >= max_edges:
-                    break
+                or truncated
+            )
             if truncated:
                 break
 
@@ -185,6 +180,40 @@ class GraphIndex:
             "truncated": truncated,
             "mode": "focused_flow",
         }
+
+    def _visit_focused_edges(
+        self,
+        candidates,
+        node_id,
+        max_nodes,
+        max_edges,
+        seen,
+        selected,
+        selected_ids,
+        visited,
+        queue,
+    ):
+        truncated = False
+        for edge in candidates:
+            if edge.type in FLOW_INPUT_RELATIONS:
+                continue
+            truncated = (
+                self._collect_focused_edge(
+                    edge,
+                    node_id,
+                    max_nodes,
+                    max_edges,
+                    seen,
+                    selected,
+                    selected_ids,
+                    visited,
+                    queue,
+                )
+                or truncated
+            )
+            if truncated and len(selected) >= max_edges:
+                break
+        return truncated
 
     def _add_focused_triggers(
         self, node_id, max_nodes, max_edges, seen, selected, selected_ids
