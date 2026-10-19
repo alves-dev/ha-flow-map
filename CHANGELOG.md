@@ -9,6 +9,7 @@ All user-relevant changes are documented in this file.
 - Restricted the Flow Map sidebar panel to Home Assistant administrators.
 - Improved panel loading, empty, and error states, including accessible labels
   and disabled controls during rebuilds and data loads.
+- Restored the index summary after relationship and focused-flow loads finish.
 - Completed the light and dark branding asset set required by Home Assistant
   and HACS, including matching high-density variants.
 

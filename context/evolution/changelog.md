@@ -30,6 +30,8 @@
   unavailable in the validation environment.
 - Release `2026.10.1` requires administrator access at panel registration and
   improves loading, empty, error, and disabled-control states for the panel.
+- The panel now restores its index summary after a relationship or focused-flow
+  load completes.
 
 ## [Current State] - Context Mesh Added
 

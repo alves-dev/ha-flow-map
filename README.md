@@ -10,6 +10,45 @@
 Read-only Home Assistant custom integration that indexes explicit relationships in
 automations, scripts and scenes, then exposes them through a `Flow Map` panel.
 
+> See the shape of your smart home before you change it.
+
+HA Flow Map turns scattered automation configuration into a searchable visual
+map. Follow what triggers an automation, what it controls, and which other
+flows may be affected—without executing templates or changing your setup.
+
+## See it in action
+
+The panel keeps the important context together: the graph, the selected item,
+and an impact summary. It also follows the active Home Assistant theme.
+
+<p align="center">
+  <img src="docs/screenshots/flow-map-impact.png" alt="HA Flow Map showing an entity and its impact summary in the light theme" width="49%">
+  <img src="docs/screenshots/flow-map-focused-dark.png" alt="HA Flow Map showing a focused automation flow in the dark theme" width="49%">
+</p>
+
+*The screenshots use the included `Flow Map Demo` scenario and show the same
+panel in light and dark themes.*
+
+## Why use HA Flow Map?
+
+- **Trace relationships quickly** — search by entity, automation, script,
+  scene, event, device, or area.
+- **Understand flow structure** — see triggers, conditions, branches, parallel
+  paths, waits, service calls, and the order of actions.
+- **Assess change impact** — inspect connected configurations and the furthest
+  dependency distance before editing an item.
+- **Keep uncertainty visible** — dynamic or template-derived references are
+  marked instead of being presented as confirmed facts.
+- **Stay read-only** — the integration observes supported configuration and
+  does not execute templates or modify Home Assistant data.
+
+## A quick tour
+
+1. Search for an item in the Flow Map sidebar.
+2. Explore inbound and outbound relationships, adjusting depth as needed.
+3. Select an automation, script, or scene to open its complete focused flow.
+4. Review the impact summary and export the graph as JSON, SVG, or PNG.
+
 ## HACS availability
 
 HA Flow Map is available as a **HACS custom repository**. In HACS, open
@@ -28,7 +67,7 @@ For manual installation, copy `custom_components/ha_flow_map` into the Home
 Assistant configuration directory's `custom_components` folder, restart Home
 Assistant, then add the integration through the same screen.
 
-## What the MVP indexes
+## What it maps
 
 - State/entity triggers, conditions and explicit action targets.
 - Nested `if`, `choose`, `repeat`, `parallel`, sequences, waits and delays.
@@ -45,7 +84,7 @@ scenes connected to it, plus the maximum number of dependency levels. This
 walks references in both directions so it catches both callers and targets;
 results are bounded to keep the panel responsive.
 
-## Deliberate MVP limits
+## Deliberate limits
 
 The integration does not render or execute Jinja templates. Literal entity IDs
 found inside templates are retained and marked `dynamic`; unresolved template
@@ -55,7 +94,7 @@ partial index if a source cannot be read.
 
 Dashboard configurations, custom cards, execution traces/history and external
 callers (REST, Node-RED, voice assistants, etc.) are not statically indexed in
-this MVP. Their absence from the map means only that no supported source
+the current implementation. Their absence from the map means only that no supported source
 discovered a relation.
 
 ## Technical documentation
