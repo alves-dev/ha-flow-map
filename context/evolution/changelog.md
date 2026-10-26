@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Aligned the development-release cleanup workflow with the shared schedule,
+  retention default, and explicit repository scoping requirements.
+
 ### Added
 
 - Focused flow now shows direct triggers and all direct output items of a
