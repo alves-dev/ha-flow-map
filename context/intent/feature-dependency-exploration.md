@@ -27,6 +27,8 @@ Lets users quickly answer practical questions such as what activates an automati
 - [x] The panel and its graph exports follow the active Home Assistant theme.
 - [x] The panel and its data queries are available only to Home Assistant
   administrators.
+- [x] The panel uses English by default and provides Brazilian Portuguese
+  translations when that Home Assistant language is selected.
 
 ## Related
 

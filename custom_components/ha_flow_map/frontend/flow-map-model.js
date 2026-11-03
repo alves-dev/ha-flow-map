@@ -70,30 +70,68 @@ export function flowLayout(nodes, edges, rootId) {
   return layout;
 }
 
-const actionVerb = {
-  activate: "Ativar",
-  close_cover: "Fechar",
-  lock: "Trancar",
-  open_cover: "Abrir",
-  play_media: "Reproduzir",
-  start: "Iniciar",
-  stop: "Parar",
-  toggle: "Alternar",
-  turn_off: "Desligar",
-  turn_on: "Ligar",
-  unlock: "Destrancar",
+const localeData = {
+  en: {
+    actionVerb: {
+      activate: "Activate",
+      close_cover: "Close",
+      lock: "Lock",
+      open_cover: "Open",
+      play_media: "Play",
+      start: "Start",
+      stop: "Stop",
+      toggle: "Toggle",
+      turn_off: "Turn off",
+      turn_on: "Turn on",
+      unlock: "Unlock",
+    },
+    domainNoun: {
+      climate: "climate",
+      cover: "cover",
+      light: "light",
+      lock: "lock",
+      media_player: "media player",
+      scene: "scene",
+      script: "script",
+      switch: "switch",
+    },
+  },
+  "pt-BR": {
+    actionVerb: {
+      activate: "Ativar",
+      close_cover: "Fechar",
+      lock: "Trancar",
+      open_cover: "Abrir",
+      play_media: "Reproduzir",
+      start: "Iniciar",
+      stop: "Parar",
+      toggle: "Alternar",
+      turn_off: "Desligar",
+      turn_on: "Ligar",
+      unlock: "Destrancar",
+    },
+    domainNoun: {
+      climate: "clima",
+      cover: "cobertura",
+      light: "luz",
+      lock: "fechadura",
+      media_player: "mídia",
+      scene: "cena",
+      script: "script",
+      switch: "interruptor",
+    },
+  },
 };
 
-const domainNoun = {
-  climate: "clima",
-  cover: "cobertura",
-  light: "luz",
-  lock: "fechadura",
-  media_player: "mídia",
-  scene: "cena",
-  script: "script",
-  switch: "interruptor",
-};
+export function uiLanguage(locale) {
+  return String(locale?.language || "en").toLowerCase().startsWith("pt")
+    ? "pt-BR"
+    : "en";
+}
+
+function localized(locale) {
+  return localeData[uiLanguage(locale)] || localeData.en;
+}
 
 function entityIds(value) {
   if (typeof value === "string") return value === "<template>" ? [] : [value];
@@ -110,19 +148,22 @@ function targetLabel(entityId, byId) {
   return byId?.get(`entity:${entityId}`)?.label || entityId;
 }
 
-export function describeAction(node, byId) {
+export function describeAction(node, byId, locale) {
+  const strings = localized(locale);
   const service = node.metadata?.service || node.label;
   const [domain, action] = String(service).split(".");
-  if (domain === "notify") return "Enviar notificação";
-  const verb = actionVerb[action];
+  if (domain === "notify") return uiLanguage(locale) === "pt-BR" ? "Enviar notificação" : "Send notification";
+  const verb = strings.actionVerb[action];
   if (!verb) return service;
   const targets = actionTargets(node);
-  const noun = domainNoun[domain];
+  const noun = strings.domainNoun[domain];
   const data = node.metadata?.data || {};
   if (domain === "light" && action === "turn_on" && targets.length === 1) {
     const brightness = data.brightness_pct;
     if (typeof brightness === "number") {
-      return `Ajustar ${targetLabel(targets[0], byId)} para ${brightness}%`;
+      return uiLanguage(locale) === "pt-BR"
+        ? `Ajustar ${targetLabel(targets[0], byId)} para ${brightness}%`
+        : `Set ${targetLabel(targets[0], byId)} to ${brightness}%`;
     }
   }
   if (targets.length === 1) return `${verb} ${targetLabel(targets[0], byId)}`;
@@ -137,84 +178,92 @@ function conditionEntity(node, edges, byId) {
   return edge && byId?.get(edge.source);
 }
 
-export function describeCondition(node, edges, byId) {
+export function describeCondition(node, edges, byId, locale) {
+  const portuguese = uiLanguage(locale) === "pt-BR";
   const type = node.metadata?.condition || node.label;
   const entity = conditionEntity(node, edges, byId);
   const label = entity?.label;
   const state = node.metadata?.state;
-  if (type === "and") return "Todas as condições são verdadeiras?";
-  if (type === "or") return "Alguma condição é verdadeira?";
-  if (type === "not") return "A condição abaixo é falsa?";
-  if (type === "template") return "Avaliar condição personalizada";
+  if (type === "and") return portuguese ? "Todas as condições são verdadeiras?" : "Are all conditions true?";
+  if (type === "or") return portuguese ? "Alguma condição é verdadeira?" : "Is any condition true?";
+  if (type === "not") return portuguese ? "A condição abaixo é falsa?" : "Is the condition below false?";
+  if (type === "template") return portuguese ? "Avaliar condição personalizada" : "Evaluate custom condition";
   if (type === "numeric_state" && label) {
     if (node.metadata?.above != null && node.metadata?.below != null) {
-      return `${label} está entre ${node.metadata.above} e ${node.metadata.below}?`;
+      return portuguese
+        ? `${label} está entre ${node.metadata.above} e ${node.metadata.below}?`
+        : `${label} is between ${node.metadata.above} and ${node.metadata.below}?`;
     }
-    if (node.metadata?.above != null) return `${label} está acima de ${node.metadata.above}?`;
-    if (node.metadata?.below != null) return `${label} está abaixo de ${node.metadata.below}?`;
+    if (node.metadata?.above != null) return portuguese ? `${label} está acima de ${node.metadata.above}?` : `${label} is above ${node.metadata.above}?`;
+    if (node.metadata?.below != null) return portuguese ? `${label} está abaixo de ${node.metadata.below}?` : `${label} is below ${node.metadata.below}?`;
   }
   if (type === "state" && label && state !== "<template>") {
-    if (state === "home") return `${label} está em casa?`;
-    if (state === "not_home") return `${label} está fora de casa?`;
+    if (state === "home") return portuguese ? `${label} está em casa?` : `${label} is home?`;
+    if (state === "not_home") return portuguese ? `${label} está fora de casa?` : `${label} is away?`;
     if (state === "on") {
       return entity.metadata?.domain === "binary_sensor"
-        ? `${label} está ativo?`
+        ? portuguese ? `${label} está ativo?` : `${label} is active?`
         : entity.metadata?.domain === "light"
-          ? `${label} está ligada?`
-          : `${label} está ligado?`;
+          ? portuguese ? `${label} está ligada?` : `${label} is on?`
+          : portuguese ? `${label} está ligado?` : `${label} is on?`;
     }
     if (state === "off") {
       return entity.metadata?.domain === "binary_sensor"
-        ? `${label} está inativo?`
+        ? portuguese ? `${label} está inativo?` : `${label} is inactive?`
         : entity.metadata?.domain === "light"
-          ? `${label} está desligada?`
-          : `${label} está desligado?`;
+          ? portuguese ? `${label} está desligada?` : `${label} is off?`
+          : portuguese ? `${label} está desligado?` : `${label} is off?`;
     }
-    if (state != null) return `${label} está em ${state}?`;
+    if (state != null) return portuguese ? `${label} está em ${state}?` : `${label} is ${state}?`;
   }
-  return label ? `Verificar ${label}` : `Condição: ${type}`;
+  return label
+    ? portuguese ? `Verificar ${label}` : `Check ${label}`
+    : portuguese ? `Condição: ${type}` : `Condition: ${type}`;
 }
 
-export function describeTrigger(node, edges) {
+export function describeTrigger(node, edges, locale) {
+  const portuguese = uiLanguage(locale) === "pt-BR";
   const edge = edges.find(
     (item) => item.source === node.id && ["triggers", "listens_event"].includes(item.type),
   );
   const trigger = edge?.metadata?.trigger;
   const state = edge?.metadata?.to;
-  if (node.type === "event") return `Evento ${node.label} recebido`;
+  if (node.type === "event") return portuguese ? `Evento ${node.label} recebido` : `Event ${node.label} received`;
   if (trigger === "state" && state !== "<template>") {
-    if (state === "on") return `${node.label} foi ativado`;
-    if (state === "off") return `${node.label} foi desativado`;
-    if (state != null) return `${node.label} mudou para ${state}`;
+    if (state === "on") return portuguese ? `${node.label} foi ativado` : `${node.label} turned on`;
+    if (state === "off") return portuguese ? `${node.label} foi desativado` : `${node.label} turned off`;
+    if (state != null) return portuguese ? `${node.label} mudou para ${state}` : `${node.label} changed to ${state}`;
   }
   if (trigger === "numeric_state" && edge?.metadata?.above != null) {
-    return `${node.label} passou de ${edge.metadata.above}`;
+    return portuguese ? `${node.label} passou de ${edge.metadata.above}` : `${node.label} went above ${edge.metadata.above}`;
   }
   return node.label;
 }
 
 /** Present an explicit graph relation without inferring execution history. */
-export function edgePresentation(edge) {
+export function edgePresentation(edge, locale) {
+  const portuguese = uiLanguage(locale) === "pt-BR";
   const location = edge.location || "";
-  if (location.includes(".else")) return { className: "no", label: "Não" };
-  if (location.includes(".then")) return { className: "yes", label: "Sim" };
+  if (location.includes(".else")) return { className: "no", label: portuguese ? "Não" : "No" };
+  if (location.includes(".then")) return { className: "yes", label: portuguese ? "Sim" : "Yes" };
   if (location.includes(".parallel")) {
-    return { className: "parallel", label: "Em paralelo" };
+    return { className: "parallel", label: portuguese ? "Em paralelo" : "In parallel" };
   }
   if (["calls_script", "calls_automation", "activates_scene"].includes(edge.type)) {
-    return { className: "calls-flow", label: "Chama fluxo" };
+    return { className: "calls-flow", label: portuguese ? "Chama fluxo" : "Calls flow" };
   }
   if (edge.type === "next") return { className: "sequence", label: "" };
   return { className: "", label: "" };
 }
 
 /** Current Home Assistant state, not an assertion about past flow execution. */
-export function automationStatus(node) {
+export function automationStatus(node, locale) {
+  const portuguese = uiLanguage(locale) === "pt-BR";
   const state = node.metadata?.state;
-  if (state === "on") return { className: "active", label: "Ativa" };
-  if (state === "off") return { className: "disabled", label: "Desativada" };
+  if (state === "on") return { className: "active", label: portuguese ? "Ativa" : "Active" };
+  if (state === "off") return { className: "disabled", label: portuguese ? "Desativada" : "Disabled" };
   if (state === "unavailable" || node.metadata?.available === false) {
-    return { className: "unavailable", label: "Indisponível" };
+    return { className: "unavailable", label: portuguese ? "Indisponível" : "Unavailable" };
   }
-  return { className: "unknown", label: "Estado desconhecido" };
+  return { className: "unknown", label: portuguese ? "Estado desconhecido" : "Unknown state" };
 }

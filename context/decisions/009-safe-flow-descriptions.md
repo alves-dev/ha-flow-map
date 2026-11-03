@@ -10,8 +10,9 @@ configuration does not establish.
 ## Decision
 
 Preserve a safe subset of explicit action, condition, and trigger fields in
-graph metadata. Generate Portuguese descriptions in independently testable
-frontend helpers from those fields and known graph nodes. Prefer a
+graph metadata. Generate localized descriptions in independently testable
+frontend helpers from those fields and known graph nodes, using English by
+default and Brazilian Portuguese when selected in Home Assistant. Prefer a
 domain-specific phrase when the service or condition is recognized; otherwise
 show a concise technical fallback. Dynamic or template-derived values remain
 identified as such and are never interpreted.

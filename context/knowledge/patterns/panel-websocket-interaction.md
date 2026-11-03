@@ -47,6 +47,8 @@ call(type, payload = {}) {
 - `custom_components/ha_flow_map/panel.py` — serves and registers the panel module.
 - `custom_components/ha_flow_map/translations/en.json` — English fallback for
   the config flow.
+- `custom_components/ha_flow_map/translations/pt-BR.json` — Brazilian
+  Portuguese config-flow translations.
 
 ## Related
 

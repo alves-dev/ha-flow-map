@@ -1,5 +1,12 @@
 # Changelog
 
+## [2026.11.1] - 2026-11-03
+
+### Changed
+
+- Changed the Flow Map interface and generated descriptions to English by
+  default, with Brazilian Portuguese localization support.
+
 ## [2026.11.0] - 2026-11-03
 
 ### Fixed

@@ -4,6 +4,13 @@ All user-relevant changes are documented in this file.
 
 ## [2026.11.0] - 2026-11-03
 
+### Changed
+
+- Changed the Flow Map interface and generated descriptions to English by
+  default.
+- Added Brazilian Portuguese translations for the config flow and interface
+  descriptions when Home Assistant uses `pt-BR`.
+
 ### Fixed
 
 - Restricted every Flow Map WebSocket command to Home Assistant administrators.

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA Flow Map",
+        "description": "Adicione o painel somente leitura do Flow Map.",
+        "data": {}
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "É necessário apenas uma instância do Flow Map."
+    }
+  }
+}
