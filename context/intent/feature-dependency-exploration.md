@@ -25,6 +25,8 @@ Lets users quickly answer practical questions such as what activates an automati
   unknown state without implying that a flow path has executed.
 - [ ] The view communicates when the result is limited or contains dynamic references.
 - [x] The panel and its graph exports follow the active Home Assistant theme.
+- [x] The panel and its data queries are available only to Home Assistant
+  administrators.
 
 ## Related
 

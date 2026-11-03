@@ -2,6 +2,14 @@
 
 All user-relevant changes are documented in this file.
 
+## [2026.11.0] - 2026-11-03
+
+### Fixed
+
+- Restricted every Flow Map WebSocket command to Home Assistant administrators.
+- Added the English config-flow translation fallback required by custom
+  integrations.
+
 ## [2026.10.1] - 2026-10-19
 
 ### Changed

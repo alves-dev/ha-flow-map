@@ -22,6 +22,9 @@ The sidebar registration now requires Home Assistant administrator access in
 addition to administrator checks on administrative WebSocket operations.
 Panel loading and failure states remain in the frontend, while authorization
 is enforced by the host panel registration rather than by hiding controls.
+Local-instance validation uses the shared containerized Home Assistant
+environment and repository helpers rather than a per-integration host process
+or PID file.
 
 ## Related
 

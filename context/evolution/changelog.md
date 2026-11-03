@@ -1,6 +1,21 @@
 # Changelog
 
+## [2026.11.0] - 2026-11-03
+
+### Fixed
+
+- Restricted every Flow Map WebSocket command to Home Assistant
+  administrators, matching the administrator-only panel.
+- Added the English config-flow translation fallback for custom-integration
+  installations.
+
 ## [Unreleased]
+
+### Changed
+
+- Migrated local Home Assistant testing helpers to the shared
+  `hass-dev-homeassistant` container and documented the canonical test
+  environment.
 
 ### Fixed
 
