@@ -7,8 +7,12 @@
 - Test: `uv run pytest --cov=custom_components/ha_flow_map --cov-report=xml --cov-report=term`
 - Frontend test: `node tests/test_frontend.mjs`
 - Structure check: `python3 /home/alves-dev/projects/others/infra/skills/home-assistant-integration-standards/scripts/validate_integration_structure.py .`
-- Manual Home Assistant deployment: `dev/copy-to-core.sh`
+- Manual Home Assistant deployment: `dev/deploy-to-ha.sh`
 - Start/stop shared Home Assistant: `dev/start-ha.sh` / `dev/stop-ha.sh`
+- These helpers manage the shared Docker container `hass-dev-homeassistant`;
+  `dev/deploy-to-ha.sh` stages this integration into its mounted configuration.
+- Shared container details, credentials, and test inventory are documented in
+  `docs/local-home-assistant.md`.
 
 Use Python 3.14.2+, `uv`, and Node.js 22+ as documented by the project. Do not use a production Home Assistant instance for experimental testing.
 

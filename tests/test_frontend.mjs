@@ -9,6 +9,7 @@ import {
   displayGraph,
   flowLayout,
   gridLayout,
+  uiLanguage,
 } from "../custom_components/ha_flow_map/frontend/flow-map-model.js";
 
 const graph = {
@@ -52,7 +53,7 @@ assert.equal(
     },
     descriptions,
   ),
-  "Ajustar Luz da mesa para 70%",
+  "Set Luz da mesa to 70%",
 );
 assert.equal(
   describeCondition(
@@ -64,34 +65,48 @@ assert.equal(
     [{ source: "entity:light.desk", target: "condition:desk", type: "used_in_condition" }],
     descriptions,
   ),
-  "Luz da mesa está desligada?",
+  "Luz da mesa is off?",
 );
 assert.equal(
   describeTrigger(
     { id: "entity:binary_sensor.motion", label: "Movimento", type: "entity" },
     [{ source: "entity:binary_sensor.motion", type: "triggers", metadata: { trigger: "state", to: "on" } }],
   ),
-  "Movimento foi ativado",
+  "Movimento turned on",
 );
 assert.deepEqual(
   edgePresentation({ type: "next", location: "actions[0].parallel[1][0]" }),
-  { className: "parallel", label: "Em paralelo" },
+  { className: "parallel", label: "In parallel" },
 );
 assert.deepEqual(
   edgePresentation({ type: "calls_script" }),
-  { className: "calls-flow", label: "Chama fluxo" },
+  { className: "calls-flow", label: "Calls flow" },
 );
 assert.deepEqual(
   edgePresentation({ type: "next", location: "actions[0].else[0]" }),
-  { className: "no", label: "Não" },
+  { className: "no", label: "No" },
 );
 assert.deepEqual(
   automationStatus({ metadata: { state: "on", available: true } }),
-  { className: "active", label: "Ativa" },
+  { className: "active", label: "Active" },
 );
 assert.deepEqual(
   automationStatus({ metadata: { state: "unavailable", available: false } }),
-  { className: "unavailable", label: "Indisponível" },
+  { className: "unavailable", label: "Unavailable" },
+);
+assert.equal(uiLanguage({ language: "en" }), "en");
+assert.equal(uiLanguage({ language: "pt-BR" }), "pt-BR");
+assert.equal(
+  describeAction(
+    { label: "light.turn_on", metadata: { service: "light.turn_on", target: { entity_id: "light.desk" }, data: { brightness_pct: 70 } } },
+    descriptions,
+    { language: "pt-BR" },
+  ),
+  "Ajustar Luz da mesa para 70%",
+);
+assert.deepEqual(
+  edgePresentation({ type: "next", location: "actions[0].then[0]" }, { language: "pt-BR" }),
+  { className: "yes", label: "Sim" },
 );
 const cyclic = flowLayout(
   [{ id: "automation:office" }, { id: "condition:enabled" }],
@@ -124,9 +139,10 @@ assert.match(panelSource, /--bg:var\(--card-background-color\)/);
 assert.match(panelSource, /--accent:var\(--primary-color\)/);
 assert.match(panelSource, /themeColor\(name\)/);
 assert.match(panelSource, /ha_flow_map\/flow/);
-assert.match(panelSource, /Ver fluxo completo/);
+assert.match(panelSource, /DEPENDENCY EXPLORER/);
+assert.match(panelSource, /pt-BR/);
 assert.match(panelSource, /action:"AÇÃO"/);
 assert.match(panelSource, /flow-map-model\.js\?v=/);
-assert.match(panelSource, /nodeTitle\(node,role,edges,byId\)/);
+assert.match(panelSource, /nodeTitle\(node,role,edges,byId,this\._locale\)/);
 assert.doesNotMatch(panelSource, /#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\(/);
 console.log("frontend model tests: ok");

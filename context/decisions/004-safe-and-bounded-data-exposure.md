@@ -18,7 +18,9 @@ Alternatives are not documented in the existing codebase. Possible alternatives 
 
 ## Outcomes
 
-Outcomes to be documented as the project evolves.
+- The panel and all Flow Map data commands require Home Assistant
+  administrator authorization before exposing configuration-derived graph
+  data.
 
 ## Related
 

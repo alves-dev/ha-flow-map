@@ -17,6 +17,10 @@ configuration flow and sidebar panel. The integration reads the runtime
 automation, script and scene configuration; do not use a production instance
 for experimental changes.
 
+The shared container, authentication, test inventory, and deployment helpers
+are documented in [Local Home Assistant](local-home-assistant.md). Use
+`dev/deploy-to-ha.sh` to stage this integration into the shared container.
+
 ## Local validation
 
 ```sh

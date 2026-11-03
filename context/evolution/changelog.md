@@ -1,6 +1,33 @@
 # Changelog
 
+## [2026.11.1] - 2026-11-03
+
+### Changed
+
+- Changed the Flow Map interface and generated descriptions to English by
+  default, with Brazilian Portuguese localization support.
+
+## [2026.11.0] - 2026-11-03
+
+### Fixed
+
+- Restricted every Flow Map WebSocket command to Home Assistant
+  administrators, matching the administrator-only panel.
+- Added the English config-flow translation fallback for custom-integration
+  installations.
+
 ## [Unreleased]
+
+### Changed
+
+- Migrated local Home Assistant testing helpers to the shared
+  `hass-dev-homeassistant` container and documented the canonical test
+  environment.
+
+### Fixed
+
+- Aligned the development-release cleanup workflow with the shared schedule,
+  retention default, and explicit repository scoping requirements.
 
 ### Added
 

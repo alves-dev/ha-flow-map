@@ -40,6 +40,7 @@ COMMON_SCHEMA = {
         vol.Optional("limit", default=50): vol.All(int, vol.Range(min=1, max=100)),
     }
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def search(_hass, connection, msg):
     coordinator = _coordinator(_hass)
@@ -52,6 +53,7 @@ async def search(_hass, connection, msg):
 
 
 @websocket_api.websocket_command({vol.Required("type"): "ha_flow_map/status"})
+@websocket_api.require_admin
 @websocket_api.async_response
 async def status(_hass, connection, msg):
     coordinator = _coordinator(_hass)
@@ -93,6 +95,7 @@ async def _graph_data(_hass, connection, msg):
 @websocket_api.websocket_command(
     {vol.Required("type"): "ha_flow_map/node", **COMMON_SCHEMA}
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def node(_hass, connection, msg):
     await _graph_data(_hass, connection, msg)
@@ -101,6 +104,7 @@ async def node(_hass, connection, msg):
 @websocket_api.websocket_command(
     {vol.Required("type"): "ha_flow_map/relations", **COMMON_SCHEMA}
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def relations(_hass, connection, msg):
     await _graph_data(_hass, connection, msg)
@@ -109,6 +113,7 @@ async def relations(_hass, connection, msg):
 @websocket_api.websocket_command(
     {vol.Required("type"): "ha_flow_map/flow", **COMMON_SCHEMA}
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def flow(_hass, connection, msg):
     await _graph_data(_hass, connection, msg)
@@ -121,6 +126,7 @@ async def flow(_hass, connection, msg):
         vol.Optional("max_depth", default=12): vol.All(int, vol.Range(min=1, max=20)),
     }
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def impact(_hass, connection, msg):
     coordinator = _coordinator(_hass)

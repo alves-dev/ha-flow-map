@@ -1,6 +1,6 @@
 # HA Flow Map
 
-![Version](https://img.shields.io/badge/Version-2026.10.1-41BDF5?style=flat-square)
+![Version](https://img.shields.io/badge/Version-2026.11.0-41BDF5?style=flat-square)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.6%2B-41BDF5?logo=homeassistant)
 [![Quality Gate](https://sonar.alves-dev.com/api/project_badges/measure?project=ha-flow-map&metric=alert_status)](https://sonar.alves-dev.com/dashboard?id=ha-flow-map)
 [![Coverage](https://sonar.alves-dev.com/api/project_badges/measure?project=ha-flow-map&metric=coverage)](https://sonar.alves-dev.com/dashboard?id=ha-flow-map)

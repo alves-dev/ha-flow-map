@@ -10,7 +10,7 @@ Use when adding an action, query, or status capability to the Flow Map panel.
 
 ## Pattern
 
-Register a schema-validated command in the backend, return a predictable result or named error, apply authorization where needed, then call the command from the panel through a single helper method.
+Register a schema-validated command in the backend, return a predictable result or named error, apply administrator authorization to every command that exposes configuration-derived data, then call the command from the panel through a single helper method.
 
 When the panel imports a local ES-module helper, give that helper its own versioned
 module URL. The panel module's cache-busting query does not automatically apply
@@ -45,6 +45,10 @@ call(type, payload = {}) {
 - `custom_components/ha_flow_map/frontend/flow-map-model.js` — versioned helper
   import kept coherent with the panel module.
 - `custom_components/ha_flow_map/panel.py` — serves and registers the panel module.
+- `custom_components/ha_flow_map/translations/en.json` — English fallback for
+  the config flow.
+- `custom_components/ha_flow_map/translations/pt-BR.json` — Brazilian
+  Portuguese config-flow translations.
 
 ## Related
 
